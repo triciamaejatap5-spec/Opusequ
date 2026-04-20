@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --color-bg: #FCFCFC;
+  --color-surface: #FFFFFF;
+  --color-border: #E8E8E8;
+  --color-accent: #B28B00;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-glass: rgba(0, 0, 0, 0.03);
+}
+
+.dark {
+  --color-bg: #0D0D0D;
+  --color-surface: #161616;
+  --color-border: #2A2A2A;
+  --color-accent: #D4AF37;
+  --color-text-primary: #F5F5F5;
+  --color-text-secondary: #A0A0A0;
+  --color-glass: rgba(255, 255, 255, 0.03);
+}
+
+@theme {
+  --font-sans: "Helvetica Neue", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Georgia", serif;
+  
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+  --color-accent: var(--color-accent);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-glass: var(--color-glass);
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text-primary font-sans antialiased;
+  }
+  
+  h1, h2, h3, .serif {
+    @apply font-serif italic font-normal;
+  }
+}
+
+.mobile-container {
+  @apply max-w-md mx-auto min-h-screen bg-bg relative flex flex-col border-x border-border;
+}
+
+.glass-nav {
+  @apply fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-surface/90 backdrop-blur-xl border-t border-border px-6 py-4 flex justify-between items-center z-50;
+}
+
+.nav-item {
+  @apply flex flex-col items-center gap-1.5 text-text-secondary transition-all uppercase tracking-[2px] font-medium;
+  font-size: 9px;
+}
+
+.nav-item.active {
+  @apply text-accent border-t-2 border-accent -mt-[18px] pt-4;
+}
+
+.card {
+  @apply bg-surface border border-border p-6 rounded-sm;
+}
+
+.status-pill {
+  @apply text-[10px] uppercase tracking-widest px-3 py-1 border border-accent text-accent rounded-full;
+}
+
+.type-tag {
+  @apply text-[9px] uppercase tracking-[1.5px] px-2 py-0.5 bg-bg border border-border rounded-sm;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
+}
