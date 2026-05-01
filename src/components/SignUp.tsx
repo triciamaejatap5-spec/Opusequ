@@ -1,6 +1,12 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { 
+  createUserWithEmailAndPassword, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult 
+} from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, Loader2, Sparkles, Chrome } from 'lucide-react';
@@ -16,7 +22,53 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
   const [role, setRole] = useState<'student' | 'admin'>('student');
   const [department, setDepartment] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setGoogleLoading(true);
+          const savedDept = localStorage.getItem('onboarding_dept');
+          const savedRole = localStorage.getItem('onboarding_role') as 'student' | 'admin';
+          
+          const userRef = doc(db, 'users', result.user.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              displayName: result.user.displayName,
+              email: result.user.email,
+              major: savedDept || 'CCS',
+              yearLevel: '',
+              status: 'QCU Working Student',
+              streak: 0,
+              readiness: 0,
+              isPremium: true,
+              createdAt: serverTimestamp()
+            });
+
+            await setDoc(doc(db, 'roles', result.user.uid), {
+              role: savedRole || 'student',
+              updatedAt: serverTimestamp()
+            });
+          }
+          localStorage.removeItem('onboarding_dept');
+          localStorage.removeItem('onboarding_role');
+          onGoogleSuccess();
+        }
+      } catch (err: any) {
+        console.error("Redirect Error:", err);
+        setError('Registration failed. Please try signing up again.');
+      } finally {
+        setGoogleLoading(false);
+      }
+    };
+
+    handleRedirectResult();
+  }, [onGoogleSuccess]);
 
   const DEPARTMENTS = [
     'COE',
@@ -31,39 +83,51 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
       setError('Please select your department before continuing.');
       return;
     }
-    setLoading(true);
+    setGoogleLoading(true);
     setError(null);
+    localStorage.setItem('onboarding_dept', department);
+    localStorage.setItem('onboarding_role', role);
+
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        // Initialize user stats if they don't exist
-        const userRef = doc(db, 'users', result.user.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            displayName: result.user.displayName,
-            email: result.user.email,
-            major: department,
-            yearLevel: '',
-            status: 'QCU Working Student',
-            streak: 0,
-            readiness: 0,
-            isPremium: true,
-            createdAt: serverTimestamp()
-          });
+      // Check if mobile or small screen
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-          // Save Role for Google users
-          await setDoc(doc(db, 'roles', result.user.uid), {
-            role: role,
-            updatedAt: serverTimestamp()
-          });
+      if (isMobile) {
+        await signInWithRedirect(auth, provider);
+      } else {
+        const result = await signInWithPopup(auth, provider);
+        if (result.user) {
+          // Initialize user stats if they don't exist
+          const userRef = doc(db, 'users', result.user.uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              displayName: result.user.displayName,
+              email: result.user.email,
+              major: department,
+              yearLevel: '',
+              status: 'QCU Working Student',
+              streak: 0,
+              readiness: 0,
+              isPremium: true,
+              createdAt: serverTimestamp()
+            });
+
+            // Save Role for Google users
+            await setDoc(doc(db, 'roles', result.user.uid), {
+              role: role,
+              updatedAt: serverTimestamp()
+            });
+          }
+          onGoogleSuccess();
         }
-        onGoogleSuccess();
       }
     } catch (err: any) {
+      console.error("Google Auth Error:", err);
       setError('Google sign-in failed. Please try again.');
-      setLoading(false);
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -218,10 +282,19 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
         <button 
           type="button"
           onClick={handleGoogleSignIn}
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="w-full bg-glass border border-border py-4 rounded-sm font-bold uppercase tracking-[4px] flex items-center justify-center gap-2 hover:bg-glass/80 disabled:opacity-50 transition-all text-sm"
         >
-          <Chrome size={18} /> Register with Google
+          {googleLoading ? (
+            <>
+              <Loader2 size={18} className="animate-spin text-accent" />
+              <span className="text-accent">Authenticating...</span>
+            </>
+          ) : (
+            <>
+              <Chrome size={18} /> Register with Google
+            </>
+          )}
         </button>
       </form>
 

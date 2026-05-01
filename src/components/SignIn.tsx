@@ -1,6 +1,13 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult 
+} from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Mail, Lock, Loader2, ArrowRight, Chrome } from 'lucide-react';
@@ -14,8 +21,53 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [department, setDepartment] = useState('');
+
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          setGoogleLoading(true);
+          const savedDept = localStorage.getItem('onboarding_dept');
+          
+          const userRef = doc(db, 'users', result.user.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              displayName: result.user.displayName,
+              email: result.user.email,
+              major: savedDept || 'CCS',
+              streak: 0,
+              readiness: 0,
+              createdAt: serverTimestamp()
+            });
+
+            const roleRef = doc(db, 'roles', result.user.uid);
+            const roleSnap = await getDoc(roleRef);
+            if (!roleSnap.exists()) {
+              await setDoc(roleRef, {
+                role: 'student',
+                updatedAt: serverTimestamp()
+              });
+            }
+          }
+          localStorage.removeItem('onboarding_dept');
+          onSuccess();
+        }
+      } catch (err: any) {
+        console.error("Redirect Error:", err);
+        setError('Verification failed. Please try signing in again.');
+      } finally {
+        setGoogleLoading(false);
+      }
+    };
+
+    handleRedirectResult();
+  }, [onSuccess]);
 
   const DEPARTMENTS = [
     'COE',
@@ -30,40 +82,53 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
       setError('Please select your department for your first time sync.');
       return;
     }
-    setLoading(true);
+    
+    setGoogleLoading(true);
     setError(null);
+    localStorage.setItem('onboarding_dept', department);
+
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        // Initialize user stats if they don't exist
-        const userRef = doc(db, 'users', result.user.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            displayName: result.user.displayName,
-            email: result.user.email,
-            major: department,
-            streak: 0,
-            readiness: 0,
-            createdAt: serverTimestamp()
-          });
-
-          // Ensure role exists
-          const roleRef = doc(db, 'roles', result.user.uid);
-          const roleSnap = await getDoc(roleRef);
-          if (!roleSnap.exists()) {
-            await setDoc(roleRef, {
-              role: 'student',
-              updatedAt: serverTimestamp()
+      // Check if mobile or small screen
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      
+      if (isMobile) {
+        await signInWithRedirect(auth, provider);
+        // Page will redirect, no need for further logic here
+      } else {
+        const result = await signInWithPopup(auth, provider);
+        if (result.user) {
+          // Initialize user stats if they don't exist
+          const userRef = doc(db, 'users', result.user.uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              displayName: result.user.displayName,
+              email: result.user.email,
+              major: department,
+              streak: 0,
+              readiness: 0,
+              createdAt: serverTimestamp()
             });
+
+            // Ensure role exists
+            const roleRef = doc(db, 'roles', result.user.uid);
+            const roleSnap = await getDoc(roleRef);
+            if (!roleSnap.exists()) {
+              await setDoc(roleRef, {
+                role: 'student',
+                updatedAt: serverTimestamp()
+              });
+            }
           }
+          onSuccess();
         }
-        onSuccess();
       }
     } catch (err: any) {
+      console.error("Google Auth Error:", err);
       setError('Google sign-in failed. Please try again.');
-      setLoading(false);
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -165,10 +230,19 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
           <button 
             type="button"
             onClick={handleGoogleSignIn}
-            disabled={loading}
+            disabled={loading || googleLoading}
             className="w-full bg-glass border border-border py-4 rounded-sm font-bold uppercase tracking-[4px] flex items-center justify-center gap-2 hover:bg-glass/80 disabled:opacity-50 transition-all text-sm"
           >
-            <Chrome size={18} /> Continue with Google
+            {googleLoading ? (
+              <>
+                <Loader2 size={18} className="animate-spin text-accent" />
+                <span className="text-accent">Authenticating...</span>
+              </>
+            ) : (
+              <>
+                <Chrome size={18} /> Continue with Google
+              </>
+            )}
           </button>
         </div>
       </form>

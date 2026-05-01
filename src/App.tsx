@@ -45,7 +45,8 @@ import {
   User,
   Info,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import {
   LineChart,
@@ -551,6 +552,7 @@ const Dashboard = ({
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Added Config Check
   if (!isFirebaseConfigured || !isGeminiConfigured) {
@@ -965,6 +967,7 @@ export default function App() {
       } else {
         setUser(null);
       }
+      setAuthLoading(false);
     });
 
     return () => unsubscribe();
@@ -1061,6 +1064,15 @@ export default function App() {
   };
 
   const renderContent = () => {
+    if (authLoading) {
+      return (
+        <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <Loader2 className="text-accent animate-spin" size={32} />
+          <p className="text-[10px] uppercase tracking-[4px] font-bold text-text-secondary">Opusequ Initializing...</p>
+        </div>
+      );
+    }
+
     if (!user) {
       if (authView === 'intro') {
         return <IntroPage onGetStarted={() => setAuthView('signup')} />;
