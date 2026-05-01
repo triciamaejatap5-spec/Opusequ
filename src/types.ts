@@ -30,3 +30,14 @@ export interface AssistantMessage {
   text: string;
   timestamp: string;
 }
+
+export interface FileMetadata {
+  id: string;
+  name: string;
+  storagePath: string;
+  downloadURL: string;
+  size: number;
+  type: string;
+  folderId?: string;
+  createdAt: any;
+}

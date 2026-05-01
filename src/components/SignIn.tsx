@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Mail, Lock, Loader2, ArrowRight, Chrome } from 'lucide-react';
 
@@ -14,14 +15,50 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [department, setDepartment] = useState('');
+
+  const DEPARTMENTS = [
+    'COE',
+    'CCS',
+    'COB',
+    'COA',
+    'CEd'
+  ];
 
   const handleGoogleSignIn = async () => {
+    if (!department) {
+      setError('Please select your department for your first time sync.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
+        // Initialize user stats if they don't exist
+        const userRef = doc(db, 'users', result.user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            displayName: result.user.displayName,
+            email: result.user.email,
+            major: department,
+            streak: 0,
+            readiness: 0,
+            createdAt: serverTimestamp()
+          });
+
+          // Ensure role exists
+          const roleRef = doc(db, 'roles', result.user.uid);
+          const roleSnap = await getDoc(roleRef);
+          if (!roleSnap.exists()) {
+            await setDoc(roleRef, {
+              role: 'student',
+              updatedAt: serverTimestamp()
+            });
+          }
+        }
         onSuccess();
       }
     } catch (err: any) {
@@ -38,13 +75,7 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
-        if (!userCredential.user.emailVerified) {
-          setError('Please verify your email before logging in. Check your inbox!');
-          await signOut(auth);
-          setLoading(false);
-        } else {
-          onSuccess();
-        }
+        onSuccess();
       }
     } catch (err: any) {
       setError('Email or password is incorrect');
@@ -116,14 +147,30 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
           </div>
         </div>
 
-        <button 
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          className="w-full bg-glass border border-border py-4 rounded-sm font-bold uppercase tracking-[4px] flex items-center justify-center gap-2 hover:bg-glass/80 disabled:opacity-50 transition-all text-sm"
-        >
-          <Chrome size={18} /> Continue with Google
-        </button>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Department (Required for Google)</label>
+            <select 
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              className="w-full bg-glass border border-border p-4 focus:border-accent outline-none transition-all rounded-sm text-sm text-text-primary h-[54px]"
+            >
+              <option value="" className="bg-bg">Select Department</option>
+              {DEPARTMENTS.map(dept => (
+                <option key={dept} value={dept} className="bg-bg">{dept}</option>
+              ))}
+            </select>
+          </div>
+
+          <button 
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full bg-glass border border-border py-4 rounded-sm font-bold uppercase tracking-[4px] flex items-center justify-center gap-2 hover:bg-glass/80 disabled:opacity-50 transition-all text-sm"
+          >
+            <Chrome size={18} /> Continue with Google
+          </button>
+        </div>
       </form>
 
       <div className="text-center">

@@ -1,29 +1,64 @@
 import { useState, FormEvent } from 'react';
-import { auth } from '../firebase';
-import { createUserWithEmailAndPassword, sendEmailVerification, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth, db } from '../firebase';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, Loader2, Sparkles, Chrome } from 'lucide-react';
 
 interface SignUpProps {
-  onVerificationSent: (email: string) => void;
   onNavigateToSignIn: () => void;
   onGoogleSuccess: () => void;
 }
 
-export default function SignUp({ onVerificationSent, onNavigateToSignIn, onGoogleSuccess }: SignUpProps) {
+export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'student' | 'admin'>('student');
+  const [department, setDepartment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const DEPARTMENTS = [
+    'COE',
+    'CCS',
+    'COB',
+    'COA',
+    'CEd'
+  ];
+
   const handleGoogleSignIn = async () => {
+    if (!department && role === 'student') {
+      setError('Please select your department before continuing.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
+        // Initialize user stats if they don't exist
+        const userRef = doc(db, 'users', result.user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            displayName: result.user.displayName,
+            email: result.user.email,
+            major: department,
+            yearLevel: '',
+            status: 'QCU Working Student',
+            streak: 0,
+            readiness: 0,
+            isPremium: true,
+            createdAt: serverTimestamp()
+          });
+
+          // Save Role for Google users
+          await setDoc(doc(db, 'roles', result.user.uid), {
+            role: role,
+            updatedAt: serverTimestamp()
+          });
+        }
         onGoogleSuccess();
       }
     } catch (err: any) {
@@ -34,15 +69,39 @@ export default function SignUp({ onVerificationSent, onNavigateToSignIn, onGoogl
 
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault();
+    if (!department && role === 'student') {
+      setError('Please select your department.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // After signUp(), we don't redirect to the dashboard immediately.
+      // We send verification and sign out to ensure they can't access private pages yet.
+      // This matches the "session is null" redirection logic requested.
       if (userCredential.user) {
-        await sendEmailVerification(userCredential.user);
-        await signOut(auth);
-        onVerificationSent(email);
+        // Initialize User Doc
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email: email,
+          major: department,
+          yearLevel: '',
+          status: 'QCU Working Student',
+          streak: 0,
+          readiness: 0,
+          isPremium: true,
+          createdAt: serverTimestamp()
+        });
+
+        // Save Role
+        await setDoc(doc(db, 'roles', userCredential.user.uid), {
+          role: role, // 'student' or 'admin'
+          updatedAt: serverTimestamp()
+        });
+
+        onGoogleSuccess();
       }
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
@@ -98,6 +157,21 @@ export default function SignUp({ onVerificationSent, onNavigateToSignIn, onGoogl
               required
             />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Department</label>
+          <select 
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            className="w-full bg-glass border border-border p-4 focus:border-accent outline-none transition-all rounded-sm text-sm text-text-primary h-[54px]"
+            required={role === 'student'}
+          >
+            <option value="" className="bg-bg">Select Department</option>
+            {DEPARTMENTS.map(dept => (
+              <option key={dept} value={dept} className="bg-bg">{dept}</option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-1">

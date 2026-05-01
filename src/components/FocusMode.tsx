@@ -2,7 +2,6 @@ import { motion } from 'motion/react';
 import { 
   Zap,
   WifiOff, 
-  Headphones, 
   ArrowRight,
   ShieldCheck,
   Coffee,
@@ -23,11 +22,11 @@ export default function FocusMode() {
         </p>
       </header>
 
-      {/* Connectivity Status */}
+      {/* Transit Status */}
       <div className="flex gap-2">
         <div className="flex-1 bg-glass border border-border p-3 rounded-sm flex items-center justify-center gap-3 transition-colors hover:border-accent group">
-          <ShieldCheck size={14} className="text-accent opacity-60 group-hover:opacity-100" />
-          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest group-hover:text-text-primary">Offline Ready</span>
+          <Zap size={14} className="text-accent opacity-60 group-hover:opacity-100" />
+          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest group-hover:text-text-primary">Sprint Active</span>
         </div>
         <div className="flex-1 bg-glass border border-border p-3 rounded-sm flex items-center justify-center gap-3 transition-colors hover:border-accent group">
           <WifiOff size={14} className="text-accent opacity-60 group-hover:opacity-100" />
@@ -46,16 +45,16 @@ export default function FocusMode() {
           >
             <div className="flex justify-between items-start relative z-10">
               <div className="p-3 border border-border text-accent">
-                <Headphones size={24} />
+                <ShieldCheck size={24} />
               </div>
-              <span className="status-pill leading-none text-[9px]">Audio Summary</span>
+              <span className="status-pill leading-none text-[9px]">Priority Review</span>
             </div>
             <div className="relative z-10">
               <h4 className="text-2xl font-serif italic text-text-primary leading-tight">Discrete Math: Sets Review</h4>
-              <p className="text-xs text-text-secondary mt-2 opacity-60 uppercase tracking-widest">8 minutes • Text-to-Speech</p>
+              <p className="text-xs text-text-secondary mt-2 opacity-60 uppercase tracking-widest">5 minutes • Rapid Reading</p>
             </div>
             <button className="w-full bg-accent text-bg py-4 rounded-sm font-bold text-xs uppercase tracking-[3px] flex items-center justify-center gap-3 transition-all hover:bg-white relative z-10">
-              Listen Now <ArrowRight size={16} />
+              Access Module <ArrowRight size={16} />
             </button>
             <Zap className="absolute -right-10 -bottom-10 w-40 h-40 text-accent opacity-[0.03] rotate-12" />
           </motion.div>

@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Student-worker profile details. Includes premium status indicator.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "streak": { "type": "integer" },
+        "readiness": { "type": "integer" },
+        "yearLevel": { "type": "string" },
+        "major": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "lastQuizDate": { "type": "string" },
+        "isPremium": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email"]
+    },
+    "Role": {
+      "title": "User Role",
+      "description": "Defines if the user is a student or an admin.",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["role"]
+    },
+    "AdminSubscription": {
+      "title": "Admin B2G Subscription",
+      "description": "Institutional bundle for 30 students.",
+      "type": "object",
+      "properties": {
+        "adminId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "expired"] },
+        "seatsUsed": { "type": "integer" },
+        "maxSeats": { "type": "integer" },
+        "students": { "type": "array", "description": "List of student UIDs sponsored by this admin" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adminId", "status", "seatsUsed", "maxSeats"]
+    },
+    "DailyUsage": {
+      "title": "Daily Usage Tracking",
+      "description": "Tracks daily quantities for freemium limits (3-3-3-3 rule)",
+      "type": "object",
+      "properties": {
+        "quizzes": { "type": "integer" },
+        "uploads": { "type": "integer" },
+        "ai": { "type": "integer" },
+        "notes": { "type": "integer" }
+      }
+    },
+    "Module": {
+      "title": "Study Module",
+      "description": "Academic module or uploaded file",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["Major Course", "Minor Course"] },
+        "type": { "type": "string", "enum": ["note", "file"] },
+        "fileUrl": { "type": "string" },
+        "fileType": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "category"]
+    },
+    "Stat": {
+      "title": "Performance Stat",
+      "description": "Daily readiness and streak tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "readiness": { "type": "integer" },
+        "streak": { "type": "integer" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "date"]
+    },
+    "Schedule": {
+      "title": "Schedule Event",
+      "description": "Work shifts or academic deadlines",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["work", "class", "study", "deadline"] },
+        "time": { "type": "string" },
+        "date": { "type": "string" },
+        "color": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "type", "time", "date"]
+    },
+    "Chat": {
+      "title": "AI Chat Message",
+      "description": "Conversational history with the AI Assistant",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["role", "text"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile document"
+    },
+    "/users/{userId}/modules/{moduleId}": {
+      "schema": "Module",
+      "description": "Study modules and files"
+    },
+    "/users/{userId}/stats/{statId}": {
+      "schema": "Stat",
+      "description": "Historical performance data"
+    },
+    "/users/{userId}/daily_usage/{YYYYMMDD}": {
+      "schema": "DailyUsage",
+      "description": "Tracks quantities for free users"
+    },
+    "/users/{userId}/schedules/{scheduleId}": {
+      "schema": "Schedule",
+      "description": "Calendar events and reminders"
+    },
+    "/users/{userId}/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "AI Assistant chat history"
+    },
+    "/roles/{userId}": {
+      "schema": "Role",
+      "description": "Global role assignment"
+    },
+    "/admin_subscriptions/{adminId}": {
+      "schema": "AdminSubscription",
+      "description": "Institutional bundle management"
+    }
+  }
+}

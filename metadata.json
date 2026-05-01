@@ -1,6 +1,7 @@
 {
   "name": "Opusequ",
   "description": "A specialized mobile productivity and micro-learning hub for QCU working students, designed to balance work shifts with academic success through Golden Study Windows.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+  ],
   "majorCapabilities": []
 }

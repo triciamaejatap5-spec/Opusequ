@@ -1,28 +1,69 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Sparkles, Book, Search, User, Bot, Loader2, X } from 'lucide-react';
+import { Send, Sparkles, User, Bot, Loader2, X } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
+import { db, auth } from '../firebase';
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, limit, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { AssistantMessage } from '../types';
 
 // Gemini Initialization
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ 
+  apiKey: process.env.GEMINI_API_KEY,
+  apiVersion: 'v1'
+});
 
 interface AssistantProps {
   onExit?: () => void;
+  usageCount: number;
+  isPremium?: boolean;
+  onLimitReached: (reason: string) => void;
 }
 
-export default function Assistant({ onExit }: AssistantProps) {
-  const [messages, setMessages] = useState<AssistantMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      text: "Mabuhay! I am your Opusequ AI Assistant. Need a definition, a concept explained, or a quick fact check from your QCU modules?",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+export default function Assistant({ onExit, usageCount, isPremium, onLimitReached }: AssistantProps) {
+  const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'users', user.uid, 'chats'), 
+      orderBy('timestamp', 'asc'),
+      limit(50)
+    );
+    
+    const unsub = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        role: doc.data().role,
+        text: doc.data().text,
+        timestamp: doc.data().timestamp?.toDate()?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'Just now'
+      })) as AssistantMessage[];
+      
+      if (msgs.length === 0) {
+        setMessages([
+          {
+            id: 'welcome',
+            role: 'assistant',
+            text: "Mabuhay! I am your Opusequ AI Assistant. Need a definition, a concept explained, or a quick fact check from your QCU modules? I'll remember our conversation for you.",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+      } else {
+        setMessages(msgs);
+      }
+      setIsInitialLoading(false);
+    }, (error) => {
+      console.error("Assistant Archive Sync Failure", error);
+      setIsInitialLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -33,43 +74,66 @@ export default function Assistant({ onExit }: AssistantProps) {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMsg: AssistantMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      text: input,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+    if (!isPremium && usageCount >= 3) {
+      onLimitReached("Daily AI assistant limit reached");
+      return;
+    }
 
-    setMessages(prev => [...prev, userMsg]);
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
     try {
+      // Increment AI usage
+      if (!isPremium) {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const usageRef = doc(db, 'users', user.uid, 'daily_usage', todayStr);
+        const usageSnap = await getDoc(usageRef);
+        
+        if (!usageSnap.exists()) {
+          await setDoc(usageRef, { quizzes: 0, uploads: 0, ai: 1, notes: 0 });
+        } else {
+          await updateDoc(usageRef, { ai: (usageSnap.data().ai || 0) + 1 });
+        }
+      }
+
+      // Save User Message
+      await addDoc(collection(db, 'users', user.uid, 'chats'), {
+        userId: user.uid,
+        role: 'user',
+        text: currentInput,
+        timestamp: serverTimestamp()
+      });
+
       const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: input,
+        model: 'gemini-3-flash-preview',
+        contents: currentInput,
         config: {
-          systemInstruction: "You are the Opusequ AI Assistant, the core academic engine for working QCUians. Be exceptionally action-oriented, empathetic, and expert. Use QCU-specific encouragement. If a student asks for a definition, say 'Opening archives for definition...' then provide it. If they ask about modules, say 'Directing to Library collections...'. Your goal is SDG 4: Quality Education through high-efficiency hub tools. Response format: Start with an action line, followed by concise academic support.",
+          systemInstruction: "You are the Opusequ AI Assistant, the core academic engine for working QCUians. Be exceptionally action-oriented, empathetic, and expert. Use QCU-specific encouragement. Respond concisely so students can back-read easily. Maintain the conversational context.",
         }
       });
 
-      const assistantMsg: AssistantMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        text: response.text || "I couldn't process that. Please try again, student.",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
+      const aiText = response.text || "I couldn't process that. Please try again, student.";
 
-      setMessages(prev => [...prev, assistantMsg]);
+      // Save AI Message
+      await addDoc(collection(db, 'users', user.uid, 'chats'), {
+        userId: user.uid,
+        role: 'assistant',
+        text: aiText,
+        timestamp: serverTimestamp()
+      });
+
     } catch (error) {
       console.error("Assistant Error:", error);
-      const errorMsg: AssistantMessage = {
-        id: (Date.now() + 1).toString(),
+      await addDoc(collection(db, 'users', user.uid, 'chats'), {
+        userId: user.uid,
         role: 'assistant',
         text: "My connection to the QCU archives is currently unstable. Please check your data connection.",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, errorMsg]);
+        timestamp: serverTimestamp()
+      });
     } finally {
       setIsLoading(false);
     }
@@ -99,6 +163,11 @@ export default function Assistant({ onExit }: AssistantProps) {
         className="flex-1 overflow-y-auto space-y-6 pr-2 scrollbar-hide"
       >
         <AnimatePresence initial={false}>
+          {messages.length > 1 && (
+            <div className="text-center py-2 border-b border-border border-dashed mb-6">
+              <span className="text-[8px] uppercase tracking-[4px] text-text-secondary opacity-30">Previous Exchanges Sync</span>
+            </div>
+          )}
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
