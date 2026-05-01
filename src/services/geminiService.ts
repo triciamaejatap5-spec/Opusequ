@@ -1,8 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Initialize the Gemini AI client
-// Note: process.env.GEMINI_API_KEY is injected by the platform at runtime
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const AI_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: AI_KEY || "missing" });
+
+export const isGeminiConfigured = !!AI_KEY && AI_KEY !== "undefined";
 
 /**
  * Extracts and defines major topics from academic materials using Gemini 3 Flash.

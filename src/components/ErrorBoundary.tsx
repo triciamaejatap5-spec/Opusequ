@@ -1,54 +1,77 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
+  error: Error | null;
 }
 
+/**
+ * Global Error Boundary for Opusequ.
+ * Prevents minor feature crashes (like deletion logic or AI extraction) from breaking the main UX.
+ */
 class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false
+    hasError: false,
+    error: null
   };
 
-  public static getDerivedStateFromError(_: Error): State {
-    return { hasError: true };
+  public static getDerivedStateFromError(error: Error): State {
+    // Update state so the next render will show the fallback UI.
+    return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    console.error('Opusequ Uncaught Error:', error, errorInfo);
   }
+
+  private handleReset = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
 
   public render() {
     if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-bg flex items-center justify-center p-6 text-center">
-          <div className="border border-accent/20 p-8 sm:p-12 bg-accent/5 backdrop-blur-xl relative overflow-hidden">
-            {/* Gold Accents */}
-            <div className="absolute top-0 left-0 w-1 h-full bg-accent"></div>
-            <div className="absolute bottom-0 right-0 w-full h-1 bg-accent/20"></div>
-            
-            <div className="space-y-6 relative z-10">
-              <div className="text-accent text-[10px] sm:text-xs uppercase tracking-[5px] font-bold">System Alert</div>
-              <h1 className="text-xl sm:text-2xl font-serif italic text-white tracking-wide">
-                Opusequ: Configuration Sync in Progress.
-              </h1>
-              <p className="text-accent/60 text-xs sm:text-sm uppercase tracking-[2px] font-medium">
-                Please refresh to complete synchronization.
-              </p>
-              <button 
-                onClick={() => window.location.reload()}
-                className="mt-4 px-6 py-2 border border-accent text-accent hover:bg-accent hover:text-bg transition-all text-xs uppercase tracking-widest font-black"
-              >
-                Refresh Archive
-              </button>
-            </div>
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
 
-            {/* Decorative Grid */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#D4AF37 1px, transparent 1px), linear-gradient(90deg, #D4AF37 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+      return (
+        <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 text-center space-y-6">
+          <div className="w-16 h-16 bg-accent/10 border border-accent rounded-full flex items-center justify-center text-accent mb-2">
+            <AlertCircle size={32} />
           </div>
+          
+          <div className="space-y-2 max-w-md">
+            <h1 className="text-2xl font-serif italic text-text-primary">Mabuhay! We hit a snag.</h1>
+            <p className="text-text-secondary text-sm">
+              An unexpected error occurred while processing your academic data. 
+              Don't worry, your progress is likely still safe in the cloud.
+            </p>
+          </div>
+
+          {this.state.error && (
+            <div className="w-full max-w-md bg-surface border border-border p-3 rounded-sm text-left">
+              <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Error Trace:</p>
+              <p className="text-[11px] font-mono text-red-400 break-all">{this.state.error.message}</p>
+            </div>
+          )}
+
+          <button 
+            onClick={this.handleReset}
+            className="flex items-center gap-2 px-6 py-3 bg-accent text-bg text-[11px] uppercase font-bold tracking-widest rounded-sm hover:opacity-90 transition-opacity"
+          >
+            <RefreshCw size={14} /> Refresh Opusequ
+          </button>
+          
+          <p className="text-[10px] text-text-secondary opacity-50 uppercase tracking-tighter">
+            Quezon City University Productivity Hub
+          </p>
         </div>
       );
     }

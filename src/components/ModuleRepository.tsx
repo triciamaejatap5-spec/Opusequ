@@ -454,6 +454,12 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     // Taglish confirmation for student accessibility
     if (!window.confirm("Sigurado ka ba na gusto mong burahin ito? (Are you sure you want to delete this?)")) return;
 
+    // Instant UI Delete: Vanish from screen immediately for better UX
+    setDocs(prev => prev.filter(d => d.id !== item.id));
+    if (selectedModule?.id === item.id) {
+      setSelectedModule(null);
+    }
+
     setIsLoading(true);
     setNotification("Mabuhay! Deleting academic module...");
 
@@ -462,13 +468,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       // We target the exact nested structure: users/{uid}/modules/{id}
       await deleteDoc(doc(db, 'users', user.uid, 'modules', item.id));
 
-      // Step 2: UI Sync - Immediately filter from state after database success
-      setDocs(prev => prev.filter(d => d.id !== item.id));
-      if (selectedModule?.id === item.id) {
-        setSelectedModule(null);
-      }
-
-      // Step 3: Sequential Cleanup - Storage Deletion (Non-blocking)
+      // Step 2: Sequential Cleanup - Storage Deletion (Non-blocking)
       // Catch errors separately so if file is missing, the UI remains synchronized
       if (item.fileUrl && (item.fileUrl.includes('firebasestorage') || item.fileUrl.startsWith('gs://'))) {
         try {
@@ -479,7 +479,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         }
       }
 
-      // Step 4: Cleanup associated cached data (Batch for efficiency)
+      // Step 3: Cleanup associated cached data (Batch for efficiency)
       const batch = writeBatch(db);
       if (item.title) batch.delete(doc(db, 'users', user.uid, 'quiz_drafts', item.title));
       batch.delete(doc(db, 'users', user.uid, 'cached_quizzes', item.id));
@@ -487,7 +487,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
 
       setNotification("Mabuhay! Module successfully removed.");
       
-      // Step 5: Force Library Refresh to ensure Sync Log is perfectly clean
+      // Step 4: Force Library Refresh to ensure Sync Log is perfectly clean
       setRefreshTrigger(prev => prev + 1);
 
     } catch (err) {
@@ -1053,6 +1053,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                             <StarIcon size={14} fill={item.isBookmarked ? "currentColor" : "none"} />
                           </button>
                           <button 
+                            type="button"
                             onClick={(e) => handleDelete(e, item)}
                             className="p-1 text-red-500/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Delete Module"

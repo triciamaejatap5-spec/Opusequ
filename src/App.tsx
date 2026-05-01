@@ -63,6 +63,8 @@ import {
 } from 'recharts';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { isFirebaseConfigured } from './firebase';
+import { isGeminiConfigured } from './services/geminiService';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -549,6 +551,27 @@ const Dashboard = ({
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  // Added Config Check
+  if (!isFirebaseConfigured || !isGeminiConfigured) {
+    return (
+      <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 text-center space-y-4">
+        <Sparkles size={40} className="text-accent animate-pulse" />
+        <div className="space-y-1">
+          <h1 className="text-2xl font-serif italic text-text-primary">Mabuhay!</h1>
+          <p className="text-text-secondary text-sm">System is initializing. Please ensure all API keys are properly configured in Settings.</p>
+        </div>
+        <div className="pt-4 flex gap-2">
+           <div className={cn("px-2 py-1 text-[8px] uppercase tracking-tighter border rounded-full font-bold", isFirebaseConfigured ? "border-green-500/30 text-green-500" : "border-red-500/30 text-red-500")}>
+             Firebase: {isFirebaseConfigured ? "Ready" : "Missing"}
+           </div>
+           <div className={cn("px-2 py-1 text-[8px] uppercase tracking-tighter border rounded-full font-bold", isGeminiConfigured ? "border-green-500/30 text-green-500" : "border-red-500/30 text-red-500")}>
+             Gemini: {isGeminiConfigured ? "Ready" : "Missing"}
+           </div>
+        </div>
+      </div>
+    );
+  }
   const [activeTab, setActiveTab] = useState('home'); // home, schedule, learning, progress, assistant, settings
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup' | 'verification'>('intro');
   const [verificationEmail, setVerificationEmail] = useState('');
