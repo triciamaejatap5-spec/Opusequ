@@ -1042,23 +1042,16 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0.5 shrink-0">
                           <button 
                             onClick={(e) => toggleBookmark(e, item.id, item.isBookmarked || false)}
                             className={cn(
-                              "p-1 transition-colors",
+                              "w-11 h-11 flex items-center justify-center transition-colors rounded-full touch-manipulation",
                               item.isBookmarked ? "text-accent" : "text-text-secondary hover:text-accent/50"
                             )}
+                            title={item.isBookmarked ? "Saved" : "Save to Vault"}
                           >
-                            <StarIcon size={14} fill={item.isBookmarked ? "currentColor" : "none"} />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={(e) => handleDelete(e, item)}
-                            className="p-1 text-red-500/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Delete Module"
-                          >
-                            <Trash2 size={14} />
+                            <StarIcon size={16} fill={item.isBookmarked ? "currentColor" : "none"} />
                           </button>
                           <button 
                             onClick={(e) => {
@@ -1066,11 +1059,22 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                               setEditingItem(item);
                               setIsEditing(true);
                             }}
-                            className="p-1 text-text-secondary hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="w-11 h-11 flex items-center justify-center text-accent transition-colors rounded-full hover:bg-accent/10 touch-manipulation"
+                            title="Edit Module"
                           >
-                            <Edit size={14} />
+                            <Edit size={16} />
                           </button>
-                          <ChevronRight size={14} className="text-text-secondary opacity-10 group-hover:opacity-100 transition-opacity" />
+                          <button 
+                            type="button"
+                            onClick={(e) => handleDelete(e, item)}
+                            className="w-11 h-11 flex items-center justify-center text-red-500/80 hover:text-red-500 transition-colors rounded-full hover:bg-red-500/10 touch-manipulation"
+                            title="Delete Module"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <div className="w-8 h-11 flex items-center justify-center opacity-20 group-hover:opacity-100 transition-opacity">
+                            <ChevronRight size={14} className="text-text-secondary" />
+                          </div>
                     </div>
                   </motion.div>
                 ))}
