@@ -20,8 +20,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc, where, updateDoc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 import { extractContentFromFile, generateInitialQuiz } from '../services/geminiService';
 import { sendGmailEmail, formatDiagnosticEmail } from '../services/gmailService';
 import { clsx, type ClassValue } from 'clsx';
@@ -49,8 +50,6 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
   const [notification, setNotification] = useState<string | null>(null);
   const [isAddingModule, setIsAddingModule] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -114,7 +113,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         if (user) {
           updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
             status: 'error',
-            content: "ARCHIVE TIMEOUT: High-fidelity extraction took too long. Please re-upload for archival sync."
+            content: "QCU Sync Issue: Please re-upload module."
           }).catch(e => console.error("Timeout cleanup failed:", e));
         }
         return null;
@@ -125,7 +124,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         if (user) {
           updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
             status: 'error',
-            content: "ARCHIVE TIMEOUT: Synchronizer timed out. Use a smaller file or better connection."
+            content: "QCU Sync Issue: Please re-upload module."
           }).catch(e => console.error("Scheduled timeout cleanup failed:", e));
         }
       }, remaining);
@@ -239,146 +238,117 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     setUploadProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'fvfp8zeu');
-      formData.append('folder', 'modules');
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'https://api.cloudinary.com/v1_1/deqy7bn3n/upload', true);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const progress = (event.loaded / event.total) * 100;
-          setUploadProgress(Math.round(progress));
-        }
+      setNotification("Initializing High-Fidelity Extraction...");
+      
+      // Convert file to Base64 locally - This is our primary pipeline now
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          if (result && result.includes(',')) {
+            resolve(result.split(',')[1]);
+          } else {
+            reject(new Error("Base64 conversion failed"));
+          }
+        };
+        reader.onerror = () => reject(new Error("FileReader error"));
+        reader.readAsDataURL(file);
+      });
+      
+      setIsProcessing(true);
+      
+      // PHASE 1: Create the "Optimistic" Document in Firestore
+      // fileUrl is null because we are bypassing external cloud storage
+      const moduleData = {
+        userId: user.uid,
+        title: file.name.split('.')[0],
+        category: newModule.category,
+        type: 'file',
+        status: 'processing',
+        isBookmarked: false,
+        isPremium: true,
+        fileUrl: null, // Decommissioned Cloudinary
+        fileType: file.type,
+        createdAt: serverTimestamp()
       };
 
-      xhr.onload = async () => {
-        if (xhr.status === 200) {
-          const response = JSON.parse(xhr.responseText);
-          const url = response.secure_url;
-          
-          setIsProcessing(true);
-          setNotification(`Cloudinary Link Active! Finalizing sync...`);
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'modules'), moduleData);
+      
+      setIsProcessing(false);
+      setIsAddingModule(false);
+      setNotification("Mabuhay! Local sync active. Extracting knowledge...");
 
-          // PRE-PROCESSING: Convert file to Base64 locally for direct AI injection
-          const base64Data = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const result = reader.result as string;
-              if (result && result.includes(',')) {
-                resolve(result.split(',')[1]);
-              } else {
-                reject(new Error("Base64 conversion failed"));
-              }
-            };
-            reader.onerror = () => reject(new Error("FileReader error"));
-            reader.readAsDataURL(file);
-          });
-          
-          // PHASE 1: Create the "Optimistic" Document in Firestore with processing status
-          const moduleData = {
-            userId: user.uid,
-            title: file.name.split('.')[0],
-            category: newModule.category,
-            type: 'file',
-            status: 'processing',
-            isBookmarked: false,
-            isPremium: true,
-            fileUrl: url,
-            fileType: file.type,
-            createdAt: serverTimestamp()
-          };
-
-          const docRef = await addDoc(collection(db, 'users', user.uid, 'modules'), moduleData);
-          
-          // Clear upload state and move on
-          setIsUploading(false);
-          setIsProcessing(false);
-          setIsAddingModule(false);
-
-          // PHASE 2: Trigger Background Processing (Non-blocking)
+          // PHASE 2: Immediate Local Background Processing
           (async () => {
             try {
-              // Direct AI Injection using locally generated Base64 data
-              // This is the robust Local Blob pipeline that avoids Cloudinary 404s
               const extractionResponse = await extractContentFromFile(base64Data, file.type, file.name);
               
-              const hasSubstantialContent = extractionResponse.content && extractionResponse.content.length > 50;
+              if (!extractionResponse.content || extractionResponse.content.length < 50) {
+                throw new Error("Empty or insufficient content extracted");
+              }
 
-              // Update with content and score
+              // Update with full topic review content and score
               await updateDoc(doc(db, 'users', user.uid, 'modules', docRef.id), {
-                content: extractionResponse.content || "Structured Topic Review ready for study.",
+                content: extractionResponse.content,
                 diagnosticScore: extractionResponse.diagnosticScore,
                 status: 'ready',
                 updatedAt: serverTimestamp()
               });
 
-              // Diagnostic Quiz - Only if we have enough content
-              if (hasSubstantialContent) {
-                const questions = await generateInitialQuiz(file.name.split('.')[0], extractionResponse.content);
-                if (questions && questions.length > 0) {
-                  await setDoc(doc(db, 'users', user.uid, 'cached_quizzes', docRef.id), {
-                    questions,
-                    updatedAt: serverTimestamp()
-                  });
+              // Generate Diagnostic Quiz automatically from the extracted content
+              const questions = await generateInitialQuiz(file.name.split('.')[0], extractionResponse.content);
+              if (questions && questions.length > 0) {
+                await setDoc(doc(db, 'users', user.uid, 'cached_quizzes', docRef.id), {
+                  questions,
+                  updatedAt: serverTimestamp()
+                });
 
-                  // Gmail Notification
-                  const isGmailConnected = localStorage.getItem('opusequ_gmail_connected') === 'true';
-                  if (isGmailConnected && user.email) {
-                    const { subject, body } = formatDiagnosticEmail(
-                      user.email,
-                      "Industrial Engineering",
-                      file.name.split('.')[0],
-                      newModule.category,
-                      extractionResponse.diagnosticScore
-                    );
-                    await sendGmailEmail({ to: user.email, subject, body });
-                  }
+                // Optional Gmail Sync
+                const isGmailConnected = localStorage.getItem('opusequ_gmail_connected') === 'true';
+                if (isGmailConnected && user.email) {
+                  const { subject, body } = formatDiagnosticEmail(
+                    user.email,
+                    "QCU Student",
+                    file.name.split('.')[0],
+                    newModule.category,
+                    extractionResponse.diagnosticScore
+                  );
+                  await sendGmailEmail({ to: user.email, subject, body });
                 }
               }
-            } catch (bgErr) {
-              console.error("Local-to-Gemini Background error:", bgErr);
+            } catch (extractionErr) {
+              console.error("Local Pipeline Failure:", extractionErr);
               await updateDoc(doc(db, 'users', user.uid, 'modules', docRef.id), {
                 status: 'error',
-                content: "AI Pipeline Offline. Please re-upload for archival extraction."
+                content: "QCU Sync Issue: Please re-upload module."
               });
+              setNotification("QCU Sync Issue: Please re-upload module.");
             }
           })();
-        } else {
-          try {
-            const rawErr = JSON.parse(xhr.responseText || '{}');
-            const errMsg = rawErr.error?.message || "File sync failed via Cloudinary.";
-            console.error("Cloudinary module upload failed", xhr.responseText);
-            setNotification(errMsg.includes("too large") ? "File too large for free tier. Please compress your PDF below 10MB." : errMsg);
-          } catch (e) {
-            setNotification("Network error. File too large or connection lost.");
-          }
-          setIsUploading(false);
-          setIsProcessing(false);
-        }
-      };
-
-      xhr.onerror = () => {
-        setIsUploading(false);
-        setIsProcessing(false);
-        setNotification("Network error during Cloudinary module sync.");
-      };
-
-      xhr.send(formData);
 
     } catch (e) {
-      console.error("File upload process error:", e);
-      setNotification("Failed to initiate Cloudinary sync.");
+      console.error("Local upload process error:", e);
+      setNotification("QCU Sync Issue: Please re-upload module.");
+      setIsUploading(false);
+    } finally {
       setIsUploading(false);
     }
+
   };
 
   const handleRetrySync = async (e: React.MouseEvent | null, item: any) => {
     if (e) e.stopPropagation();
     const user = auth.currentUser;
-    if (!user || !item.fileUrl) return;
+    if (!user) return;
+
+    if (!item.fileUrl) {
+      setNotification("QCU Sync Issue: Please re-upload module.");
+      await updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
+        status: 'error',
+        content: "QCU Sync Issue: Please re-upload module."
+      });
+      return;
+    }
 
     setNotification(`Re-initiating sync for ${item.title}...`);
     
@@ -436,7 +406,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
           if (isGmailConnected && user.email) {
             const { subject, body } = formatDiagnosticEmail(
               user.email,
-              "Industrial Engineering",
+              "QCU Student",
               item.title,
               item.category,
               extractionResponse.diagnosticScore
@@ -451,17 +421,17 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       // Ensure we don't end up in an infinite loop by setting status back to error but with a specific msg
       await updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
         status: 'error',
-        content: "RECOVERY FAILED: AI Pipeline offline. Please check your data or re-upload manually."
+        content: "QCU Sync Issue: Please re-upload module."
       });
-      setNotification("AI Synchronizer recovery failed.");
+      setNotification("QCU Sync Issue: Please re-upload module.");
     } finally {
       setTimeout(() => setNotification(null), 3000);
     }
   };
 
-  // Automatic Recovery Effect
+  // Automatic Recovery Effect (Legacy Support)
   useEffect(() => {
-    if (selectedModule && selectedModule.status === 'error' && selectedModule.fileUrl && !selectedModule.content?.includes("RECOVERY FAILED")) {
+    if (selectedModule && selectedModule.status === 'error' && selectedModule.fileUrl && !selectedModule.content?.includes("QCU Sync Issue")) {
       handleRetrySync(null, selectedModule);
     }
   }, [selectedModule?.id, selectedModule?.status]);
@@ -472,45 +442,56 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
 
   const [showAllModules, setShowAllModules] = useState(false);
 
-  const handleBatchDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
     const user = auth.currentUser;
-    if (!user || selectedIds.length === 0) return;
+    if (!user) return;
 
-    if (!window.confirm(`Permanently delete ${selectedIds.length} archives? This cannot be undone.`)) return;
+    console.log("Mabuhay! Deleting module ID:", item.id);
+
+    if (!window.confirm("Sigurado ka ba na gusto mong burahin ito? (Are you sure you want to delete this?)")) return;
 
     setIsLoading(true);
-    
+    setNotification("Mabuhay! Deleting academic module...");
+
     try {
-      // Step 1: Force Unsubscribe from active listeners to avoid 'permission-denied' during delete
-      if (unsubModulesRef.current) {
-        unsubModulesRef.current();
-        unsubModulesRef.current = null;
+      // Step 1: Direct Firestore Reference Deletion
+      // Higher priority: Attempt to delete from the database first
+      await deleteDoc(doc(db, 'users', user.uid, 'modules', item.id));
+
+      // Step 2: UI Sync - Immediately filter from state after DB success
+      setDocs(prev => prev.filter(d => d.id !== item.id));
+      if (selectedModule?.id === item.id) {
+        setSelectedModule(null);
       }
 
-      // Step 2: Execute Deletion
+      // Step 3: Sequential Cleanup - Storage Deletion (Non-blocking)
+      // Only proceed to storage if Firestore deletion succeeded.
+      // If the file is already gone, or storage fails, we still consider the module removed from UI.
+      if (item.fileUrl && (item.fileUrl.includes('firebasestorage') || item.fileUrl.startsWith('gs://'))) {
+        try {
+          const fileRef = ref(storage, item.fileUrl);
+          await deleteObject(fileRef);
+        } catch (storageErr) {
+          console.warn("Storage deletion error (ignored to maintain UI progress):", storageErr);
+        }
+      }
+
+      // Step 4: Cleanup associated cached data (Atomic Batch)
       const batch = writeBatch(db);
-      for (const id of selectedIds) {
-        const item = docs.find(i => i.id === id);
-        batch.delete(doc(db, 'users', user.uid, 'modules', id));
-        
-        // Cascade: Remove drafts
-        if (item?.title) batch.delete(doc(db, 'users', user.uid, 'quiz_drafts', item.title));
-        // Cascade: Remove cache
-        batch.delete(doc(db, 'users', user.uid, 'cached_quizzes', id));
-      }
-
+      if (item.title) batch.delete(doc(db, 'users', user.uid, 'quiz_drafts', item.title));
+      batch.delete(doc(db, 'users', user.uid, 'cached_quizzes', item.id));
       await batch.commit();
+
+      setNotification("Mabuhay! Module successfully removed.");
       
-      // Step 4: UI Cleanup & Success Feedback
-      setNotification(`Module successfully removed.`);
-      setSelectedIds([]);
-      setIsEditMode(false);
-      
-      // Step 5: Re-initialize listeners
+      // Step 5: Force Library Refresh to ensure Sync Log is perfectly clean
       setRefreshTrigger(prev => prev + 1);
+
     } catch (err) {
-      console.error("Batch delete execution error:", err);
-      setNotification("Synchronization failed during deletion.");
+      console.error("Critical Deletion failure:", err);
+      setNotification("Mabuhay! We couldn't remove this right now. Please check your connection.");
+      // Trigger refresh to restore local state if Firestore call failed
       setRefreshTrigger(prev => prev + 1);
     } finally {
       setIsLoading(false);
@@ -551,12 +532,6 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     }
   };
 
-  const toggleSelection = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
   const toggleBookmark = async (e: React.MouseEvent, id: string, currentState: boolean) => {
     e.stopPropagation();
     const user = auth.currentUser;
@@ -571,41 +546,6 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       setTimeout(() => setNotification(null), 2000);
     } catch (err) {
       console.error("Bookmark toggle error:", err);
-    }
-  };
-
-  const handleSingleDelete = async () => {
-    const user = auth.currentUser;
-    if (!user || !editingItem) return;
-
-    if (!window.confirm("Are you sure you want to delete this module? This cannot be undone.")) return;
-
-    setIsLoading(true);
-    try {
-      unsubModulesRef.current?.();
-      unsubModulesRef.current = null;
-
-      const batch = writeBatch(db);
-      batch.delete(doc(db, 'users', user.uid, 'modules', editingItem.id));
-      
-      // Cascade: Remove drafts
-      if (editingItem.title) batch.delete(doc(db, 'users', user.uid, 'quiz_drafts', editingItem.title));
-      // Cascade: Remove cache
-      batch.delete(doc(db, 'users', user.uid, 'cached_quizzes', editingItem.id));
-
-      await batch.commit();
-
-      setNotification("Module successfully removed.");
-      setIsEditing(false);
-      setEditingItem(null);
-      setRefreshTrigger(prev => prev + 1);
-    } catch (err) {
-      console.error("Deletion error:", err);
-      setNotification("Failed to delete module.");
-      setRefreshTrigger(prev => prev + 1);
-    } finally {
-      setIsLoading(false);
-      setTimeout(() => setNotification(null), 3000);
     }
   };
 
@@ -758,7 +698,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
               <div className="flex justify-between items-center border-b border-accent/20 pb-4 relative z-10">
                 <div className="space-y-1">
                   <h3 className="text-lg sm:text-xl font-serif italic text-accent tracking-wide">
-                    {selectedModule.status === 'processing' ? 'Reconstructing knowledge...' : 'QCU Structured Topic Review'}
+                    {selectedModule.status === 'processing' ? 'Reconstructing knowledge...' : 'QCU Full Context Topic Review'}
                   </h3>
                   <p className="text-[8px] uppercase tracking-[3px] text-accent/60">
                     {selectedModule.status === 'processing' ? 'Multi-Layer Extraction Protocol Active' : 'Verified Knowledge Archive'}
@@ -799,14 +739,14 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                     </div>
                     <div className="text-center space-y-3">
                       <p className="text-[10px] uppercase tracking-[6px] font-black animate-pulse text-accent">Extracting Topics...</p>
-                      <p className="text-[7px] uppercase tracking-widest opacity-40">Bypassing Cloudinary for High-Fidelity Local Sync</p>
+                      <p className="text-[7px] uppercase tracking-widest opacity-40">Direct Local Sync Protocol v2.0 | No External Storage</p>
                     </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 space-y-4">
                     <Sparkles className="text-accent/40" size={32} />
                     <p className="text-accent/60 text-center italic text-xs">
-                      Initializing QCU Topic Review...
+                      Initializing QCU Full Context Topic Review...
                     </p>
                   </div>
                 )}
@@ -869,17 +809,9 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                   <textarea value={editingItem.content} onChange={e => setEditingItem({...editingItem, content: e.target.value})} rows={10} className="w-full bg-surface border border-border rounded-sm py-4 px-4 text-sm resize-none" />
                 </div>
               )}
-              <div className="flex gap-4 pt-4 border-t border-border">
+              <div className="flex gap-4 pt-4 border-t border-border focus-within:z-10">
                 <button type="submit" disabled={isLoading} className="flex-1 bg-accent text-bg py-5 rounded-sm font-bold uppercase tracking-[4px]">
                   {isLoading ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Update Module'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handleSingleDelete}
-                  disabled={isLoading}
-                  className="px-6 border border-red-500/50 text-red-500 hover:bg-red-500/10 rounded-sm flex items-center justify-center transition-all"
-                >
-                  <Trash2 size={20} />
                 </button>
               </div>
             </form>
@@ -983,20 +915,6 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
             <h2 className="text-2xl sm:text-3xl italic truncate">Library Hub</h2>
           </div>
           <div className="flex gap-2 shrink-0">
-            {filteredItems.length > 0 && (
-              <button 
-                onClick={() => {
-                  setIsEditMode(!isEditMode);
-                  setSelectedIds([]);
-                }}
-                className={cn(
-                  "px-4 py-2 border rounded-sm text-[10px] font-bold uppercase tracking-widest transition-all",
-                  isEditMode ? "bg-accent text-bg border-accent" : "border-border text-text-secondary hover:border-accent hover:text-accent"
-                )}
-              >
-                {isEditMode ? 'Cancel' : 'Edit'}
-              </button>
-            )}
             <button onClick={() => setIsAddingModule(true)} className="p-2 sm:p-3 bg-accent text-bg border border-accent rounded-sm shadow-lg hover:shadow-accent/40 transition-all">
               <Plus className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
             </button>
@@ -1075,28 +993,14 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                   <motion.div 
                     key={`display-item-${item.id}-${idx}`}
                     onClick={() => {
-                      if (isEditMode) {
-                        toggleSelection(item.id);
-                        return;
-                      }
                       setSelectedModule(item);
                     }}
                     className={cn(
-                      "flex items-center gap-4 p-4 bg-glass border-b border-border/30 group cursor-pointer hover:bg-surface transition-all relative overflow-hidden",
-                      selectedIds.includes(item.id) && "bg-accent/10 border-l-2 border-l-accent"
+                      "flex items-center gap-4 p-4 bg-glass border-b border-border/30 group cursor-pointer hover:bg-surface transition-all relative overflow-hidden"
                     )}
                   >
-                    {isEditMode && (
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all",
-                        selectedIds.includes(item.id) ? "bg-accent border-accent text-bg" : "border-border"
-                      )}>
-                        {selectedIds.includes(item.id) && <Plus size={10} className="rotate-45" />}
-                      </div>
-                    )}
                     <div className={cn(
-                      "p-2 bg-bg border shrink-0",
-                      selectedIds.includes(item.id) ? 'border-accent text-accent' : 'border-border text-accent opacity-40'
+                      "p-2 bg-bg border shrink-0 border-border text-accent opacity-40"
                     )}>
                       {item.type === 'file' ? <FileText size={16} /> : <Folder size={16} />}
                     </div>
@@ -1137,8 +1041,6 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {!isEditMode && (
-                        <>
                           <button 
                             onClick={(e) => toggleBookmark(e, item.id, item.isBookmarked || false)}
                             className={cn(
@@ -1147,6 +1049,13 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                             )}
                           >
                             <StarIcon size={14} fill={item.isBookmarked ? "currentColor" : "none"} />
+                          </button>
+                          <button 
+                            onClick={(e) => handleDelete(e, item)}
+                            className="p-1 text-red-500/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Delete Module"
+                          >
+                            <Trash2 size={14} />
                           </button>
                           <button 
                             onClick={(e) => {
@@ -1159,8 +1068,6 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                             <Edit size={14} />
                           </button>
                           <ChevronRight size={14} className="text-text-secondary opacity-10 group-hover:opacity-100 transition-opacity" />
-                        </>
-                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -1191,23 +1098,6 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       </div>
 
       <AnimatePresence>
-        {isEditMode && selectedIds.length > 0 && (
-          <motion.div 
-            initial={{ y: 50, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }} 
-            exit={{ y: 50, opacity: 0 }}
-            className="fixed bottom-24 left-4 right-4 z-[60] max-w-lg mx-auto"
-          >
-            <button 
-              onClick={handleBatchDelete}
-              disabled={isLoading}
-              className="w-full bg-red-500 text-white py-4 rounded-sm font-bold uppercase tracking-[4px] shadow-2xl flex items-center justify-center gap-3 hover:bg-red-600 transition-all disabled:opacity-50"
-            >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-              Delete {selectedIds.length} Selected
-            </button>
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );

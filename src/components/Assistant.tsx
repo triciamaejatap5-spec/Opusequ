@@ -8,7 +8,7 @@ import { AssistantMessage } from '../types';
 
 // Gemini Initialization
 const ai = new GoogleGenAI({ 
-  apiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "",
+  apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || "",
   apiVersion: 'v1'
 });
 

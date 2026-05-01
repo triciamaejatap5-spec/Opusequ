@@ -1,4 +1,4 @@
-const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "";
+const API_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY || "";
 
 /**
  * Robust fetch wrapper to handle QCU network environment and Gemini authorization requirements.
@@ -55,19 +55,16 @@ export async function extractContentFromFile(base64Data: string, fileType: strin
 
   let prompt = `Analyze this academic file: "${fileName}".
   
-  CORE MISSION: Perform a high-fidelity "Structured Topic Review" extraction. 
-  Your goal is to recreate the module's knowledge as an organized, easy-to-read list of topics.
+  CORE MISSION: Perform a high-fidelity "Full Context Topic Review" extraction. 
+  Your goal is to transcribe and define EVERY major topic found in the source material.
   
-  EXTRACTION PROTOCOL:
-  1. Logical Topic Extraction: List EVERY major topic found (e.g., Definitions, History, Rules, Procedures).
-  2. Brief Explanation: For each topic, provide a 'Brief Explanation' (2-3 sentences) that captures the absolute essential lesson.
-  3. Header Hierarchy: Use Markdown (# ##) for main topics. Use **Bold** for sub-topics.
-  4. QCU Focus: Emphasize practical applications suitable for Industrial Engineering or IT students at QCU.
-  
-  FORMATTING:
-  - Use clean Markdown syntax.
-  - No conversational filler.
-  - Structured list style: [Topic Name] followed by [Brief Explanation].
+  DIRECTIONS:
+  1. No Summary: Do not summarize the whole document. Instead, extract the specific lessons.
+  2. Topic List: Identify and list EVERY major concept (e.g., Basketball Definition, History of the Game, Basic Rules, Court Dimensions).
+  3. Format: Use a **Bold Heading** for each topic name.
+  4. Explanation: Follow each heading with a 2-3 sentence 'Brief Explanation' that defines the topic accurately based on the text.
+  5. Structure: Use a clean, organized list with bullet points where appropriate.
+  6. Tone: Educational, concise, and academic.
   
   CRITICAL: At the very end, provide exactly one line: "DIAGNOSTIC_WEIGHT: 21/25".`;
 
@@ -105,7 +102,7 @@ export async function extractContentFromFile(base64Data: string, fileType: strin
     const weight = weightMatch ? weightMatch[1] : "21";
     
     return {
-      content: text.replace(/DIAGNOSTIC_WEIGHT: .*/, "").trim() || `Extracted summary for ${fileName}. Material is ready for review.`,
+      content: text.replace(/DIAGNOSTIC_WEIGHT: .*/, "").trim() || `Full Context Topic Review for ${fileName}. Material is ready for review.`,
       diagnosticScore: `${weight}/25`
     };
   } catch (err) {
@@ -121,10 +118,10 @@ export async function generateInitialQuiz(title: string, content: string) {
   const model = "gemini-1.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-  const prompt = `Generate 25 multiple-choice questions for a "Diagnostic Quiz" based on this Structured Topic Review: ${title}.
+  const prompt = `Generate 25 multiple-choice questions for a "Diagnostic Quiz" based on this Full Context Topic Review: ${title}.
   Review Content: ${content}
   
-  GOAL: Ensure the quiz specifically targets the key lessons captured in the 'Brief Explanations' of each topic.
+  GOAL: Ensure the quiz specifically targets the key lessons and facts captured in the 'Brief Explanations' of each topic in the review.
   Format: Return ONLY a raw JSON array of objects with keys: question, options (array of 4 strings), correctAnswer (index 0-3), explanation.`;
 
   try {
