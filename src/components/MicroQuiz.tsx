@@ -13,8 +13,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const ai = new GoogleGenAI({ 
-  apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || "",
-  apiVersion: 'v1'
+  apiKey: process.env.GEMINI_API_KEY
 });
 
 const generateQuizWithRetry = async (module: any, usedQuestions: Set<string>, retryCount = 0): Promise<any[]> => {

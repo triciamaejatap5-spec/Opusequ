@@ -443,31 +443,33 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
   const [showAllModules, setShowAllModules] = useState(false);
 
   const handleDelete = async (e: React.MouseEvent, item: any) => {
+    e.preventDefault();
     e.stopPropagation();
     const user = auth.currentUser;
     if (!user) return;
 
+    // Logging for troubleshooting as requested
     console.log("Mabuhay! Deleting module ID:", item.id);
 
+    // Taglish confirmation for student accessibility
     if (!window.confirm("Sigurado ka ba na gusto mong burahin ito? (Are you sure you want to delete this?)")) return;
 
     setIsLoading(true);
     setNotification("Mabuhay! Deleting academic module...");
 
     try {
-      // Step 1: Direct Firestore Reference Deletion
-      // Higher priority: Attempt to delete from the database first
+      // Step 1: Direct Firestore Reference Deletion (Sequential Priority)
+      // We target the exact nested structure: users/{uid}/modules/{id}
       await deleteDoc(doc(db, 'users', user.uid, 'modules', item.id));
 
-      // Step 2: UI Sync - Immediately filter from state after DB success
+      // Step 2: UI Sync - Immediately filter from state after database success
       setDocs(prev => prev.filter(d => d.id !== item.id));
       if (selectedModule?.id === item.id) {
         setSelectedModule(null);
       }
 
       // Step 3: Sequential Cleanup - Storage Deletion (Non-blocking)
-      // Only proceed to storage if Firestore deletion succeeded.
-      // If the file is already gone, or storage fails, we still consider the module removed from UI.
+      // Catch errors separately so if file is missing, the UI remains synchronized
       if (item.fileUrl && (item.fileUrl.includes('firebasestorage') || item.fileUrl.startsWith('gs://'))) {
         try {
           const fileRef = ref(storage, item.fileUrl);
@@ -477,7 +479,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         }
       }
 
-      // Step 4: Cleanup associated cached data (Atomic Batch)
+      // Step 4: Cleanup associated cached data (Batch for efficiency)
       const batch = writeBatch(db);
       if (item.title) batch.delete(doc(db, 'users', user.uid, 'quiz_drafts', item.title));
       batch.delete(doc(db, 'users', user.uid, 'cached_quizzes', item.id));
@@ -491,7 +493,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     } catch (err) {
       console.error("Critical Deletion failure:", err);
       setNotification("Mabuhay! We couldn't remove this right now. Please check your connection.");
-      // Trigger refresh to restore local state if Firestore call failed
+      // Trigger refresh to restore local state if the server call actually failed
       setRefreshTrigger(prev => prev + 1);
     } finally {
       setIsLoading(false);

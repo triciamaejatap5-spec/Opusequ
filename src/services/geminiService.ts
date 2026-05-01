@@ -1,59 +1,15 @@
-const API_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY || "";
+import { GoogleGenAI } from "@google/genai";
+
+// Initialize the Gemini AI client
+// Note: process.env.GEMINI_API_KEY is injected by the platform at runtime
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
- * Robust fetch wrapper to handle QCU network environment and Gemini authorization requirements.
- * Ensures the 'x-goog-api-key' is explicitly included and handles transient network failures.
+ * Extracts and defines major topics from academic materials using Gemini 3 Flash.
+ * This replaces the legacy fetch-based extraction to ensure reliability and compatibility.
  */
-async function safeFetch(url: string, body: any, attempts = 0): Promise<any> {
-    if (!API_KEY || API_KEY === "undefined") {
-        console.error("Critical: Gemini API key is missing or undefined in current environment.");
-    }
-
-    const apiUrl = url;
-    const separator = apiUrl.includes('?') ? '&' : '?';
-    const signedUrl = `${apiUrl}${separator}key=${API_KEY}`;
-
-    try {
-        const response = await fetch(signedUrl, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': API_KEY 
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => "Unknown error");
-            let errorData = {};
-            try { errorData = JSON.parse(errorText); } catch(e) {}
-
-            // Check for credential or transient issues (401, 403, 429)
-            if ((response.status === 401 || response.status === 403 || response.status === 429) && attempts < 1) {
-                console.warn(`Safe fetch authorization/rate error ${response.status}. Retrying in 1.5s...`);
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                return safeFetch(url, body, attempts + 1);
-            }
-            throw new Error(`Safe fetch failed: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-
-        return await response.json();
-    } catch (err) {
-        if (attempts < 1) {
-            console.warn(`Safe fetch network error. Retrying in 2s...`, err);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            return safeFetch(url, body, attempts + 1);
-        }
-        throw err;
-    }
-}
-
 export async function extractContentFromFile(base64Data: string, fileType: string, fileName: string) {
-  const model = "gemini-1.5-flash"; 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
-  let prompt = `Analyze this academic file: "${fileName}".
+  const prompt = `Analyze this academic file: "${fileName}".
   
   CORE MISSION: Perform a high-fidelity "Full Context Topic Review" extraction. 
   Your goal is to transcribe and define EVERY major topic found in the source material.
@@ -82,8 +38,9 @@ export async function extractContentFromFile(base64Data: string, fileType: strin
       normalizedMimeType = 'video/mp4';
     }
 
-    const body = {
-      contents: [{
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
         parts: [
           { text: prompt },
           {
@@ -93,31 +50,32 @@ export async function extractContentFromFile(base64Data: string, fileType: strin
             }
           }
         ]
-      }]
-    };
+      }
+    });
 
-    const data = await safeFetch(url, body);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const text = response.text || "";
+    
+    if (!text) {
+      throw new Error("Empty or insufficient content extracted from AI response.");
+    }
+
     const weightMatch = text.match(/DIAGNOSTIC_WEIGHT: (\d+)\/25/);
     const weight = weightMatch ? weightMatch[1] : "21";
     
     return {
-      content: text.replace(/DIAGNOSTIC_WEIGHT: .*/, "").trim() || `Full Context Topic Review for ${fileName}. Material is ready for review.`,
+      content: text.replace(/DIAGNOSTIC_WEIGHT: .*/, "").trim(),
       diagnosticScore: `${weight}/25`
     };
   } catch (err) {
     console.error("AI Content Extraction Error:", err);
-    return {
-      content: "", 
-      diagnosticScore: "21/25"
-    };
+    throw err; // Re-throw to allow component level error handling
   }
 }
 
+/**
+ * Generates quiz questions based on extracted content.
+ */
 export async function generateInitialQuiz(title: string, content: string) {
-  const model = "gemini-1.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
   const prompt = `Generate 25 multiple-choice questions for a "Diagnostic Quiz" based on this Full Context Topic Review: ${title}.
   Review Content: ${content}
   
@@ -127,18 +85,16 @@ export async function generateInitialQuiz(title: string, content: string) {
   try {
     if (!content || content.length < 50) return [];
     
-    const body = {
-        contents: [{
-            parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-            responseMimeType: "application/json"
-        }
-    };
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
 
-    const data = await safeFetch(url, body);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    return JSON.parse(text || '[]');
+    const text = response.text || "[]";
+    return JSON.parse(text);
   } catch (err) {
     console.error("Quiz generation error:", err);
     return [];
