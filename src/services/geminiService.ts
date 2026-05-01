@@ -9,7 +9,7 @@ async function safeFetch(url: string, body: any, attempts = 0): Promise<any> {
         console.error("Critical: Gemini API key is missing or undefined in current environment.");
     }
 
-    const apiUrl = url.includes('v1') ? url : url.replace('/v1beta/', '/v1/');
+    const apiUrl = url;
     const separator = apiUrl.includes('?') ? '&' : '?';
     const signedUrl = `${apiUrl}${separator}key=${API_KEY}`;
 
@@ -51,7 +51,7 @@ async function safeFetch(url: string, body: any, attempts = 0): Promise<any> {
 
 export async function extractContentFromFile(base64Data: string, fileType: string, fileName: string) {
   const model = "gemini-1.5-flash"; 
-  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   let prompt = `Analyze this academic file: "${fileName}".
   
@@ -119,7 +119,7 @@ export async function extractContentFromFile(base64Data: string, fileType: strin
 
 export async function generateInitialQuiz(title: string, content: string) {
   const model = "gemini-1.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const prompt = `Generate 25 multiple-choice questions for a "Diagnostic Quiz" based on this Structured Topic Review: ${title}.
   Review Content: ${content}
