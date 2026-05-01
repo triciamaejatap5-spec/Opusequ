@@ -60,7 +60,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
           displayName: data.displayName || user.displayName || '',
           yearLevel: data.yearLevel || '',
           major: data.major || '',
-          status: data.status || 'QCU Working Student',
+          status: data.status || 'QC Working Student',
           photoURL: data.photoURL || user.photoURL || ''
         });
       }
@@ -77,9 +77,9 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
   ];
 
   const STATUS_OPTIONS = [
-    'QCU Working Student',
-    'QCU Full-Time Student',
-    'QCU Alumni'
+    'QC Working Student',
+    'QC Full-Time Student',
+    'QC Alumni'
   ];
 
   const handleSaveProfile = async () => {
@@ -98,7 +98,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
         displayName: profileData.displayName,
         photoURL: profileData.photoURL
       });
-      setNotification("Profile Updated Successfully!", "Mabuhay! Your academic identity is synced.");
+      setNotification("Profile Updated Successfully!", "Your academic identity is synced.");
       setShowProfileEdit(false);
     } catch (e) {
       console.error(e);
@@ -351,7 +351,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
                   >
                     <option value="" className="bg-bg">Select College</option>
                     {DEPARTMENTS.map(dept => (
-                      <option key={dept} value={dept} className="bg-bg">{dept}</option>
+                      <option key={`dept-${dept}`} value={dept} className="bg-bg">{dept}</option>
                     ))}
                   </select>
                 </div>
@@ -363,7 +363,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
                     className="w-full bg-glass border border-border p-4 focus:border-accent outline-none rounded-sm text-sm text-text-primary h-[54px]"
                   >
                     {STATUS_OPTIONS.map(status => (
-                      <option key={status} value={status} className="bg-bg">{status}</option>
+                      <option key={`status-${status}`} value={status} className="bg-bg">{status}</option>
                     ))}
                   </select>
                 </div>
@@ -459,13 +459,13 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
       </header>
 
       <div className="space-y-10">
-        {sections.map((section, idx) => (
-          <div key={idx} className="space-y-4">
+        {sections.map((section) => (
+          <div key={`section-${section.title}`} className="space-y-4">
             <h3 className="text-[10px] uppercase tracking-[3px] text-accent font-bold px-1">{section.title}</h3>
             <div className="space-y-1">
-              {section.items.map((item, i) => (
+              {section.items.map((item) => (
                 <div 
-                  key={i}
+                  key={`setting-item-${item.label}`}
                   onClick={item.action}
                   className={`flex items-center gap-4 p-5 bg-glass border-b border-border/50 group transition-all ${item.action ? 'cursor-pointer hover:bg-white/5' : ''}`}
                 >
@@ -506,7 +506,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
 
       <div className="text-center space-y-2 opacity-20 py-10">
         <p className="text-[9px] uppercase tracking-widest font-bold">Opusequ v2.4.0</p>
-        <p className="text-[9px] uppercase tracking-widest italic">Designed for QCU Students</p>
+        <p className="text-[9px] uppercase tracking-widest italic">Designed for QC Students</p>
       </div>
     </div>
   );

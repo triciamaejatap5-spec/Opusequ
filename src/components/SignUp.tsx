@@ -3,9 +3,7 @@ import { auth, db } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
   GoogleAuthProvider, 
-  signInWithPopup, 
-  signInWithRedirect, 
-  getRedirectResult 
+  signInWithPopup 
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
@@ -26,49 +24,8 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          setGoogleLoading(true);
-          const savedDept = localStorage.getItem('onboarding_dept');
-          const savedRole = localStorage.getItem('onboarding_role') as 'student' | 'admin';
-          
-          const userRef = doc(db, 'users', result.user.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              displayName: result.user.displayName,
-              email: result.user.email,
-              major: savedDept || 'CCS',
-              yearLevel: '',
-              status: 'QCU Working Student',
-              streak: 0,
-              readiness: 0,
-              isPremium: true,
-              createdAt: serverTimestamp()
-            });
-
-            await setDoc(doc(db, 'roles', result.user.uid), {
-              role: savedRole || 'student',
-              updatedAt: serverTimestamp()
-            });
-          }
-          localStorage.removeItem('onboarding_dept');
-          localStorage.removeItem('onboarding_role');
-          onGoogleSuccess();
-        }
-      } catch (err: any) {
-        console.error("Redirect Error:", err);
-        setError('Registration failed. Please try signing up again.');
-      } finally {
-        setGoogleLoading(false);
-      }
-    };
-
-    handleRedirectResult();
-  }, [onGoogleSuccess]);
+    // No redirect logic needed as we use popups for stability
+  }, []);
 
   const DEPARTMENTS = [
     'COE',
@@ -80,57 +37,55 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
 
   const handleGoogleSignIn = async () => {
     if (!department && role === 'student') {
-      setError('Please select your department before continuing.');
+      setError('Please select your department.');
       return;
     }
     setGoogleLoading(true);
     setError(null);
-    localStorage.setItem('onboarding_dept', department);
-    localStorage.setItem('onboarding_role', role);
 
     try {
       const provider = new GoogleAuthProvider();
-      // Check if mobile or small screen
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      // ALWAYS use popup for stability in iframe env
+      const result = await signInWithPopup(auth, provider);
+      
+      if (result.user) {
+        // Initialize user stats if they don't exist
+        const userRef = doc(db, 'users', result.user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            displayName: result.user.displayName,
+            email: result.user.email,
+            major: department,
+            yearLevel: '',
+            status: 'QC Working Student',
+            streak: 0,
+            readiness: 0,
+            isPremium: true,
+            createdAt: serverTimestamp()
+          });
 
-      if (isMobile) {
-        await signInWithRedirect(auth, provider);
-      } else {
-        const result = await signInWithPopup(auth, provider);
-        if (result.user) {
-          // Initialize user stats if they don't exist
-          const userRef = doc(db, 'users', result.user.uid);
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              displayName: result.user.displayName,
-              email: result.user.email,
-              major: department,
-              yearLevel: '',
-              status: 'QCU Working Student',
-              streak: 0,
-              readiness: 0,
-              isPremium: true,
-              createdAt: serverTimestamp()
-            });
-
-            // Save Role for Google users
-            await setDoc(doc(db, 'roles', result.user.uid), {
-              role: role,
-              updatedAt: serverTimestamp()
-            });
-          }
-          onGoogleSuccess();
+          // Save Role for Google users
+          await setDoc(doc(db, 'roles', result.user.uid), {
+            role: role,
+            updatedAt: serverTimestamp()
+          });
         }
+        onGoogleSuccess();
       }
     } catch (err: any) {
       console.error("Google Auth Error:", err);
-      setError('Google sign-in failed. Please try again.');
+      if (err.code === 'auth/popup-blocked') {
+        setError('Popup blocked. Please allow popups.');
+      } else {
+        setError('Google sign-in failed. Please try again.');
+      }
     } finally {
       setGoogleLoading(false);
     }
   };
 
+  // Strictly popup based auth for stability
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault();
     if (!department && role === 'student') {
@@ -152,7 +107,7 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
           email: email,
           major: department,
           yearLevel: '',
-          status: 'QCU Working Student',
+          status: 'QC Working Student',
           streak: 0,
           readiness: 0,
           isPremium: true,
@@ -173,7 +128,7 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
       } else if (err.code === 'auth/weak-password') {
         setError('Password is too weak. Please use at least 6 characters.');
       } else if (err.code === 'auth/invalid-email') {
-        setError('Please provide a valid QCU student email address.');
+        setError('Please provide a valid student email address.');
       } else {
         setError('Registration failed: ' + err.message);
       }
@@ -194,7 +149,7 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
 
       <form onSubmit={handleSignUp} className="space-y-5">
         <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Email</label>
+          <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Student Email</label>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
             <input 
@@ -202,7 +157,7 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-glass border border-border p-4 pl-12 focus:border-accent outline-none transition-all rounded-sm text-sm"
-              placeholder="student@qcu.edu.ph"
+              placeholder="student@qc.edu.ph"
               required
             />
           </div>

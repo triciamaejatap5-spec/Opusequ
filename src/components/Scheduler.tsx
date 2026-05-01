@@ -140,6 +140,51 @@ export default function Scheduler({ onExit }: SchedulerProps) {
         </button>
       </header>
 
+      <div className="bg-accent/5 border border-accent/20 p-6 rounded-sm space-y-4">
+        <div className="flex items-center gap-2 text-accent">
+          <Zap size={16} fill="currentColor" />
+          <p className="text-[10px] uppercase tracking-[2px] font-bold">Optimal Study Windows (QC Analysis)</p>
+        </div>
+        <div className="space-y-3">
+          {(() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayTasks = tasks.filter(t => t.date === todayStr).sort((a, b) => a.time.localeCompare(b.time));
+            
+            if (todayTasks.length < 2) {
+              return <p className="text-[11px] text-text-secondary leading-relaxed italic font-serif">Add more events to your schedule to see the best windows for study.</p>;
+            }
+
+            // Simple gap analysis
+            const suggestions = [];
+            for (let i = 0; i < todayTasks.length - 1; i++) {
+              const current = todayTasks[i];
+              const next = todayTasks[i+1];
+              
+              const currentEnd = new Date(`2000-01-01T${current.time}`);
+              currentEnd.setHours(currentEnd.getHours() + (current.type === 'work' ? 8 : 1.5)); // Estimate durations
+              
+              const nextStart = new Date(`2000-01-01T${next.time}`);
+              const gapMinutes = (nextStart.getTime() - currentEnd.getTime()) / (1000 * 60);
+
+              if (gapMinutes >= 30) {
+                suggestions.push(`You have a ${Math.floor(gapMinutes)} min gap after ${current.title}. Perfect for a micro-learning session.`);
+              }
+            }
+
+            return suggestions.length > 0 ? (
+              suggestions.slice(0, 2).map((s, idx) => (
+                <div key={idx} className="flex gap-3 items-start">
+                  <div className="w-1 h-1 rounded-full bg-accent mt-1.5 shrink-0" />
+                  <p className="text-[11px] text-text-primary leading-tight italic font-serif">{s}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-[11px] text-text-secondary leading-relaxed italic font-serif">Your schedule is full today. Remember to take short breaks when possible.</p>
+            );
+          })()}
+        </div>
+      </div>
+
       <AnimatePresence>
         {isAdding && (
           <motion.div 

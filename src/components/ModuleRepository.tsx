@@ -113,7 +113,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         if (user) {
           updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
             status: 'error',
-            content: "QCU Sync Issue: Please re-upload module."
+            content: "QC Sync Issue: Please re-upload module."
           }).catch(e => console.error("Timeout cleanup failed:", e));
         }
         return null;
@@ -124,7 +124,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         if (user) {
           updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
             status: 'error',
-            content: "QCU Sync Issue: Please re-upload module."
+            content: "QC Sync Issue: Please re-upload module."
           }).catch(e => console.error("Scheduled timeout cleanup failed:", e));
         }
       }, remaining);
@@ -164,7 +164,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         type: draft.type || 'note'
       });
       setShowDraftBanner(false);
-      setNotification("Mabuhay! Draft restored successfully.");
+      setNotification("Draft restored successfully.");
     }
   };
 
@@ -276,7 +276,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       
       setIsProcessing(false);
       setIsAddingModule(false);
-      setNotification("Mabuhay! Local sync active. Extracting knowledge...");
+      setNotification("Local sync active. Extracting knowledge...");
 
           // PHASE 2: Immediate Local Background Processing
           (async () => {
@@ -308,7 +308,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                 if (isGmailConnected && user.email) {
                   const { subject, body } = formatDiagnosticEmail(
                     user.email,
-                    "QCU Student",
+                    "QC Student",
                     file.name.split('.')[0],
                     newModule.category,
                     extractionResponse.diagnosticScore
@@ -320,15 +320,15 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
               console.error("Local Pipeline Failure:", extractionErr);
               await updateDoc(doc(db, 'users', user.uid, 'modules', docRef.id), {
                 status: 'error',
-                content: "QCU Sync Issue: Please re-upload module."
+                content: "QC Sync Issue: Please re-upload module."
               });
-              setNotification("QCU Sync Issue: Please re-upload module.");
+              setNotification("QC Sync Issue: Please re-upload module.");
             }
           })();
 
     } catch (e) {
       console.error("Local upload process error:", e);
-      setNotification("QCU Sync Issue: Please re-upload module.");
+      setNotification("QC Sync Issue: Please re-upload module.");
       setIsUploading(false);
     } finally {
       setIsUploading(false);
@@ -342,10 +342,10 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     if (!user) return;
 
     if (!item.fileUrl) {
-      setNotification("QCU Sync Issue: Please re-upload module.");
+      setNotification("QC Sync Issue: Please re-upload module.");
       await updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
         status: 'error',
-        content: "QCU Sync Issue: Please re-upload module."
+        content: "QC Sync Issue: Please re-upload module."
       });
       return;
     }
@@ -406,7 +406,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
           if (isGmailConnected && user.email) {
             const { subject, body } = formatDiagnosticEmail(
               user.email,
-              "QCU Student",
+              "QC Student",
               item.title,
               item.category,
               extractionResponse.diagnosticScore
@@ -415,15 +415,15 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
           }
         }
       }
-      setNotification(`Mabuhay! AI Sync successful for ${item.title}.`);
+      setNotification(`AI Sync successful for ${item.title}.`);
     } catch (err) {
       console.error("Retry sync error:", err);
       // Ensure we don't end up in an infinite loop by setting status back to error but with a specific msg
       await updateDoc(doc(db, 'users', user.uid, 'modules', item.id), {
         status: 'error',
-        content: "QCU Sync Issue: Please re-upload module."
+        content: "QC Sync Issue: Please re-upload module."
       });
-      setNotification("QCU Sync Issue: Please re-upload module.");
+      setNotification("QC Sync Issue: Please re-upload module.");
     } finally {
       setTimeout(() => setNotification(null), 3000);
     }
@@ -431,7 +431,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
 
   // Automatic Recovery Effect (Legacy Support)
   useEffect(() => {
-    if (selectedModule && selectedModule.status === 'error' && selectedModule.fileUrl && !selectedModule.content?.includes("QCU Sync Issue")) {
+    if (selectedModule && selectedModule.status === 'error' && selectedModule.fileUrl && !selectedModule.content?.includes("QC Sync Issue")) {
       handleRetrySync(null, selectedModule);
     }
   }, [selectedModule?.id, selectedModule?.status]);
@@ -449,10 +449,10 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     if (!user) return;
 
     // Logging for troubleshooting as requested
-    console.log("Mabuhay! Deleting module ID:", item.id);
+    console.log("Deleting module ID:", item.id);
 
     // Taglish confirmation for student accessibility
-    if (!window.confirm("Sigurado ka ba na gusto mong burahin ito? (Are you sure you want to delete this?)")) return;
+    if (!window.confirm("Are you sure you want to delete this?")) return;
 
     // Instant UI Delete: Vanish from screen immediately for better UX
     setDocs(prev => prev.filter(d => d.id !== item.id));
@@ -461,7 +461,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     }
 
     setIsLoading(true);
-    setNotification("Mabuhay! Deleting academic module...");
+    setNotification("Deleting academic module...");
 
     try {
       // Step 1: Direct Firestore Reference Deletion (Sequential Priority)
@@ -485,14 +485,14 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       batch.delete(doc(db, 'users', user.uid, 'cached_quizzes', item.id));
       await batch.commit();
 
-      setNotification("Mabuhay! Module successfully removed.");
+      setNotification("Module successfully removed.");
       
       // Step 4: Force Library Refresh to ensure Sync Log is perfectly clean
       setRefreshTrigger(prev => prev + 1);
 
     } catch (err) {
       console.error("Critical Deletion failure:", err);
-      setNotification("Mabuhay! We couldn't remove this right now. Please check your connection.");
+      setNotification("We couldn't remove this right now. Please check your connection.");
       // Trigger refresh to restore local state if the server call actually failed
       setRefreshTrigger(prev => prev + 1);
     } finally {
@@ -520,7 +520,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         updatedAt: serverTimestamp()
       });
 
-      setNotification("Mabuhay! Module updated successfully.");
+      setNotification("Module updated successfully.");
       setIsEditing(false);
       setEditingItem(null);
       setRefreshTrigger(prev => prev + 1);
@@ -612,7 +612,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       
       // DIAGNOSTIC PIPELINE: Generate 25 questions and send email (OFFLOADED)
       if ((newModule as any).diagnosticScore) {
-        setNotification("Mabuhay! Module synced. AI Archive generating in background...");
+        setNotification("Module synced. AI Archive generating in background...");
         
         // Background Process
         (async () => {
@@ -628,7 +628,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
               if (isGmailConnected && user.email) {
                 const { subject, body } = formatDiagnosticEmail(
                   user.email,
-                  "Industrial Engineering",
+                  "QC Student",
                   newModule.title,
                   newModule.category,
                   (newModule as any).diagnosticScore
@@ -695,12 +695,12 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
           <div className="flex-1 flex flex-col min-h-0 bg-black border border-accent/30 rounded-sm overflow-hidden p-1 shadow-[0_0_50px_rgba(212,175,55,0.1)]">
             <div className="flex-1 bg-[#050505] border-none p-6 sm:p-8 rounded-sm space-y-6 overflow-y-auto custom-scrollbar relative z-[100] shadow-2xl">
               <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none">
-                <div className="text-[80px] font-serif italic text-accent select-none">Mabuhay</div>
+                <div className="text-[80px] font-serif italic text-accent select-none">Opusequ</div>
               </div>
               <div className="flex justify-between items-center border-b border-accent/20 pb-4 relative z-10">
                 <div className="space-y-1">
                   <h3 className="text-lg sm:text-xl font-serif italic text-accent tracking-wide">
-                    {selectedModule.status === 'processing' ? 'Reconstructing knowledge...' : 'QCU Full Context Topic Review'}
+                    {selectedModule.status === 'processing' ? 'Reconstructing knowledge...' : 'QC Full Context Topic Review'}
                   </h3>
                   <p className="text-[8px] uppercase tracking-[3px] text-accent/60">
                     {selectedModule.status === 'processing' ? 'Multi-Layer Extraction Protocol Active' : 'Verified Knowledge Archive'}
@@ -748,7 +748,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                   <div className="flex flex-col items-center justify-center py-20 space-y-4">
                     <Sparkles className="text-accent/40" size={32} />
                     <p className="text-accent/60 text-center italic text-xs">
-                      Initializing QCU Full Context Topic Review...
+                      Initializing QC Full Context Topic Review...
                     </p>
                   </div>
                 )}
@@ -760,7 +760,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                     <p className="text-[8px] uppercase tracking-[3px] text-accent/60 font-bold">Authenticity Guarantee</p>
                   </div>
                   <div className="text-accent/40 text-[9px] font-serif italic">
-                    This module has been verified by the QCU Opusequ AI Integration Layer. All extracts are primary source derivatives.
+                    This module has been verified by the QC Opusequ AI Integration Layer. All extracts are primary source derivatives.
                   </div>
                 </div>
               )}
@@ -801,7 +801,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                 <label className="text-[10px] uppercase tracking-widest text-accent font-bold">Category</label>
                 <div className="grid grid-cols-2 gap-2">
                   {["Major Course", "Minor Course"].map(c => (
-                    <button key={c} type="button" onClick={() => setEditingItem({...editingItem, category: c})} className={`py-3 border rounded-sm text-[10px] uppercase tracking-widest font-bold ${editingItem.category === c ? 'bg-accent text-bg border-accent' : 'border-border text-text-secondary'}`}>{c}</button>
+                    <button key={`edit-cat-${c}`} type="button" onClick={() => setEditingItem({...editingItem, category: c})} className={`py-3 border rounded-sm text-[10px] uppercase tracking-widest font-bold ${editingItem.category === c ? 'bg-accent text-bg border-accent' : 'border-border text-text-secondary'}`}>{c}</button>
                   ))}
                 </div>
               </div>
@@ -836,7 +836,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                 className="bg-accent/10 border border-accent/20 p-4 rounded-sm flex items-center justify-between gap-4"
               >
                 <p className="text-[10px] text-accent font-bold uppercase tracking-widest">
-                  Mabuhay! We found an unsaved draft.
+                  We found an unsaved draft.
                 </p>
                 <div className="flex gap-4">
                   <button onClick={restoreDraft} className="text-[10px] text-accent font-bold underline uppercase tracking-widest">Restore Draft</button>
@@ -880,7 +880,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
               {newModule.type === 'note' && (
                 <div className="space-y-1">
                   <label className="text-[10px] uppercase tracking-widest text-accent font-bold px-1">Review Content</label>
-                  <textarea value={newModule.content} onChange={e => setNewModule({...newModule, content: e.target.value})} rows={4} className="w-full bg-surface border border-border rounded-sm py-4 px-4 text-sm focus:border-accent outline-none text-text-primary resize-none placeholder:italic placeholder:opacity-50" placeholder="Type or paste your QCU module content here..." />
+                  <textarea value={newModule.content} onChange={e => setNewModule({...newModule, content: e.target.value})} rows={4} className="w-full bg-surface border border-border rounded-sm py-4 px-4 text-sm focus:border-accent outline-none text-text-primary resize-none placeholder:italic placeholder:opacity-50" placeholder="Type or paste your QC module content here..." />
                 </div>
               )}
 
@@ -888,7 +888,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                 <label className="text-[10px] uppercase tracking-widest text-accent font-bold px-1">Target Collection</label>
                 <div className="grid grid-cols-2 gap-2">
                   {["Major Course", "Minor Course"].map(c => (
-                    <button key={c} type="button" onClick={() => setNewModule({...newModule, category: c})} className={`py-3 border rounded-sm text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all ${newModule.category === c ? 'bg-accent text-bg border-accent' : 'border-border text-text-secondary'}`}>{c}</button>
+                    <button key={`new-module-cat-${c}`} type="button" onClick={() => setNewModule({...newModule, category: c})} className={`py-3 border rounded-sm text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all ${newModule.category === c ? 'bg-accent text-bg border-accent' : 'border-border text-text-secondary'}`}>{c}</button>
                   ))}
                 </div>
               </div>
@@ -929,7 +929,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Search QCU archives..." 
+            placeholder="Search QC archives..." 
             className="w-full bg-surface border border-border rounded-sm py-3 sm:py-4 pl-12 pr-4 text-sm focus:border-accent outline-none text-text-primary"
           />
         </div>
@@ -967,7 +967,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {["All", "Saved"].map((cat) => (
               <button 
-                key={cat} 
+                key={`filter-hub-${cat}`} 
                 onClick={() => setActiveCollection(cat)}
                 className={cn(
                   "py-2 px-6 border rounded-sm text-[9px] font-bold uppercase tracking-[1px] transition-all whitespace-nowrap",
@@ -991,9 +991,9 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-accent" /></div>
             ) : displayedItems.length > 0 ? (
               <>
-                {displayedItems.map((item, idx) => (
+                {displayedItems.map((item) => (
                   <motion.div 
-                    key={`display-item-${item.id}-${idx}`}
+                    key={`hub-item-${item.id}`}
                     onClick={() => {
                       setSelectedModule(item);
                     }}

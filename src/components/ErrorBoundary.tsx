@@ -48,7 +48,7 @@ class ErrorBoundary extends Component<Props, State> {
           </div>
           
           <div className="space-y-2 max-w-md">
-            <h1 className="text-2xl font-serif italic text-text-primary">Mabuhay! We hit a snag.</h1>
+            <h1 className="text-2xl font-serif italic text-text-primary">Something went wrong.</h1>
             <p className="text-text-secondary text-sm">
               An unexpected error occurred while processing your academic data. 
               Don't worry, your progress is likely still safe in the cloud.
@@ -70,7 +70,7 @@ class ErrorBoundary extends Component<Props, State> {
           </button>
           
           <p className="text-[10px] text-text-secondary opacity-50 uppercase tracking-tighter">
-            Quezon City University Productivity Hub
+            Quezon City Working Students Productivity Hub
           </p>
         </div>
       );

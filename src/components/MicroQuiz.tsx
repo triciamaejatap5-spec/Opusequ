@@ -26,7 +26,7 @@ const generateQuizWithRetry = async (module: any, usedQuestions: Set<string>, re
     CONSTRAINTS:
     1. Concise questions (definitions or short phrases).
     2. Choices must be single words or short phrases, NOT sentences.
-    3. Error on the side of Industrial Engineering context if applicable.
+    3. Error on the side of QC Working Student context if applicable.
     4. Keep the question pool fresh.`;
 
     const response = await ai.models.generateContent({
@@ -34,7 +34,7 @@ const generateQuizWithRetry = async (module: any, usedQuestions: Set<string>, re
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
-        systemInstruction: `You are an expert QCU academic coach. Your goal is to generate zero-friction, interactive multiple-choice questions for working students.
+        systemInstruction: `You are an expert QC academic coach. Your goal is to generate zero-friction, interactive multiple-choice questions for working students.
         Strictly base questions on the provided study material.
         Format: Return a JSON array of objects with keys: question, options (array of 4 strings), correctAnswer (index 0-3), explanation.`
       }
@@ -239,7 +239,7 @@ export default function MicroQuiz({
       console.error("Quiz Gen Error:", e);
       // Reset generating state is handled by finally, but let's clear the processing view
       setSelectedModule(null);
-      alert("Failed to synchronize AI Quiz. QCU servers may be Busy (404/500). Please retry in 30s.");
+      alert("Failed to synchronize AI Quiz. QC servers may be Busy (404/500). Please retry in 30s.");
     } finally {
       setIsGenerating(false);
     }

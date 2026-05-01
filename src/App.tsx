@@ -223,7 +223,7 @@ const Dashboard = ({
     if (val >= 90) return "Mastery achieved! You're ready for the exam. Keep this streak alive to maintain your edge!";
     if (val >= 75) return "Great job! You're consistent. A little more focus on the details will get you to Excellent.";
     if (val >= 50) return "Steady progress! You have the basics down, but some core concepts are still tricky. Focus on definitions next time to reach Green.";
-    return "Don't be discouraged! You're struggling with recent topics. Try re-reading your QCU modules before your next sprint.";
+    return "Don't be discouraged! You're struggling with recent topics. Try re-reading your modules before your next sprint.";
   };
 
   const pendingReviews = useMemo(() => {
@@ -254,9 +254,9 @@ const Dashboard = ({
             </div>
             <div className="space-y-1 text-left">
               <span className="status-pill leading-none py-1.5 h-auto">Coach Active</span>
-              <h1 className="text-2xl sm:text-3xl leading-tight">Mabuhay, {userData?.displayName?.split(' ')[0] || 'Student'}.</h1>
+              <h1 className="text-2xl sm:text-3xl leading-tight">Welcome, {userData?.displayName?.split(' ')[0] || 'Student'}.</h1>
               <p className="text-text-secondary text-[10px] uppercase tracking-widest font-medium">
-                {userData?.major || 'COE'} | {userData?.status || 'QCU Working Student'}
+                {userData?.major || 'COE'} | {userData?.status || 'QC Working Student'}
               </p>
             </div>
           </div>
@@ -292,7 +292,7 @@ const Dashboard = ({
             <div className="text-bg">
               <p className="text-[10px] uppercase font-bold tracking-widest">Active Sprint Detected</p>
               <p className="text-[11px] font-medium leading-tight">
-                Mabuhay! You are at {unfinishedQuizzes[0].currentIndex + 1}/{unfinishedQuizzes[0].quizPool?.length}. Don't leave it unfinished—finish your quiz now to update your readiness score!
+                You are at {unfinishedQuizzes[0].currentIndex + 1}/{unfinishedQuizzes[0].quizPool?.length}. Don't leave it unfinished—finish your quiz now to update your readiness score!
               </p>
             </div>
           </div>
@@ -560,7 +560,7 @@ export default function App() {
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 text-center space-y-4">
         <Sparkles size={40} className="text-accent animate-pulse" />
         <div className="space-y-1">
-          <h1 className="text-2xl font-serif italic text-text-primary">Mabuhay!</h1>
+          <h1 className="text-2xl font-serif italic text-text-primary">Welcome!</h1>
           <p className="text-text-secondary text-sm">System is initializing. Please ensure all API keys are properly configured in Settings.</p>
         </div>
         <div className="pt-4 flex gap-2">
@@ -667,7 +667,7 @@ export default function App() {
       setIsGmailConnected(true);
       localStorage.setItem('opusequ_gmail_connected', 'true');
       setNotification({
-        message: "Mabuhay! Gmail Connected",
+        message: "Gmail Connected",
         sub: "You will now receive high-priority alerts and daily briefings in your inbox."
       });
     } catch (error: any) {
@@ -699,7 +699,7 @@ export default function App() {
       if (tomorrowEvents.length > 0 || pendingReviews.length > 0 || draftCount > 0) {
         const { subject, body } = formatBriefingEmail(
           user.email || '',
-          userData?.major || 'QCU Student',
+          userData?.major || 'QC Student',
           tomorrowEvents,
           pendingReviews,
           draftCount,
@@ -774,7 +774,7 @@ export default function App() {
       if (hasLocalDraft > 0) parts.push(`${hasLocalDraft} unsaved study note draft`);
 
       if (parts.length > 0) {
-        // Format sentence: "Mabuhay! You have X, Y, and Z."
+        // Format sentence: "You have X, Y, and Z."
         let subText = parts.join(', ');
         const lastCommaIndex = subText.lastIndexOf(', ');
         if (lastCommaIndex !== -1 && parts.length > 1) {
@@ -782,7 +782,7 @@ export default function App() {
         }
 
         setNotification({
-          message: "Mabuhay! Opusequ Status Update",
+          message: "Opusequ Status Update",
           sub: `You have ${subText}.`
         });
 
@@ -790,7 +790,7 @@ export default function App() {
         if (isGmailConnected && user) {
           const { subject, body } = formatBriefingEmail(
             user.email || '',
-            userData?.major || 'QCU Student',
+            userData?.major || 'QC Student',
             tomorrowEvents,
             validModules.filter(m => !quizAttempts.some(s => s.moduleId === m.id || s.title === m.title)),
             draftCount,
@@ -821,7 +821,7 @@ export default function App() {
       initialSyncCount++;
       if (initialSyncCount === totalExpectedSyncs) {
         setNotification({
-          message: "Mabuhay! System Synchronized",
+          message: "System Synchronized",
           sub: "All academic and shift data is currently up to date."
         });
       }
@@ -949,9 +949,9 @@ export default function App() {
 
   const getContextQuote = () => {
     const hour = new Date().getHours();
-    if (hour > 17) return "Shift complete or starting? Either way, QCU excellence never sleeps.";
+    if (hour > 17) return "Shift complete or starting? Either way, excellence never sleeps.";
     if (activeTab === 'sprint') return "A 5-minute gap is an opportunity in disguise. Let's sharpen your readiness.";
-    if (readiness < 80) return "Consistency is the key to balancing work and QCU studies. You're getting there.";
+    if (readiness < 80) return "Consistency is the key to balancing work and studies. You're getting there.";
     return "Top-tier alignment. Your working-student hustle is paying off. Ready for the challenge!";
   };
 
@@ -960,7 +960,15 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (authLoading) {
+        setAuthLoading(false);
+        console.warn("Auth initialization timed out.");
+      }
+    }, 8000); // 8 second timeout
+
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      clearTimeout(timeout);
       if (authUser) {
         setUser(authUser);
         setActiveTab('home');
@@ -970,7 +978,10 @@ export default function App() {
       setAuthLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
@@ -995,7 +1006,7 @@ export default function App() {
       // Award readiness increase logic
       const increase = score >= 90 ? 10 : score >= 75 ? 5 : 2;
       setNotification({
-        message: `Mabuhay! Readiness synchronized.`,
+        message: `Readiness synchronized.`,
         sub: `Sprint complete: ${rawScore}/${totalQuestions}. Level increased by ${increase}%.`
       });
 
@@ -1004,7 +1015,7 @@ export default function App() {
         try {
           const { subject, body } = formatDiagnosticEmail(
             user.email,
-            userData?.major || 'QCU Student',
+            userData?.major || 'QC Student',
             title,
             'Micro-Quiz Sprint',
             `${rawScore}/${totalQuestions}`
@@ -1069,6 +1080,12 @@ export default function App() {
         <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 text-center space-y-4">
           <Loader2 className="text-accent animate-spin" size={32} />
           <p className="text-[10px] uppercase tracking-[4px] font-bold text-text-secondary">Opusequ Initializing...</p>
+          <button 
+            onClick={() => setAuthLoading(false)} 
+            className="text-[9px] uppercase tracking-widest text-accent/50 hover:text-accent font-bold mt-4"
+          >
+            Trouble signing in? Skip to Login
+          </button>
         </div>
       );
     }

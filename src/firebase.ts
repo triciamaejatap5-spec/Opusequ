@@ -5,20 +5,20 @@ import { getStorage } from "firebase/storage";
 import firebaseConfig from "../firebase-applet-config.json";
 
 // Initialize Firebase
-const firebaseConfigSafe = firebaseConfig && Object.keys(firebaseConfig).length > 0 ? { ...firebaseConfig, projectId: "opusequ" } : {
-  apiKey: "missing",
-  authDomain: "missing",
+const firebaseConfigSafe = { 
+  apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey || "missing",
+  authDomain: firebaseConfig.authDomain || "missing",
   projectId: "opusequ",
-  storageBucket: "missing",
-  messagingSenderId: "missing",
-  appId: "missing"
+  storageBucket: firebaseConfig.storageBucket || "missing",
+  messagingSenderId: firebaseConfig.messagingSenderId || "missing",
+  appId: firebaseConfig.appId || "missing"
 };
 
 const app = initializeApp(firebaseConfigSafe);
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || "(default)");
 
-export const isFirebaseConfigured = firebaseConfig && Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey !== "missing";
+export const isFirebaseConfigured = firebaseConfigSafe.apiKey !== "missing";
 
 // Enable Offline Persistence
 enableMultiTabIndexedDbPersistence(db).catch((err) => {

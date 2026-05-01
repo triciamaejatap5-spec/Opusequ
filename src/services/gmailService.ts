@@ -108,7 +108,7 @@ export const formatBriefingEmail = (
   `;
 
   let content = `<div style="padding: 20px; font-family: sans-serif; color: #333; line-height: 1.6;">`;
-  content += `<p style="font-size: 16px;">Mabuhay! Here is your daily production goal summary.</p>`;
+  content += `<p style="font-size: 16px;">Here is your daily production goal summary.</p>`;
 
   if (tomorrowEvents.length > 0) {
     content += `<h3 style="color: #000; border-bottom: 1px solid #ddd; padding-bottom: 5px;">📅 Schedules & Deadlines (Next 24h)</h3><ul>`;
@@ -164,13 +164,13 @@ export const formatDiagnosticEmail = (
   const header = `
     <div style="background-color: #000; color: #D4AF37; padding: 20px; text-align: center; font-family: sans-serif; border-bottom: 2px solid #D4AF37;">
       <h1 style="margin: 0; font-style: italic;">Opusequ</h1>
-      <p style="margin: 5px 0 0; font-size: 10px; letter-spacing: 4px; font-weight: bold; text-transform: uppercase;">Mabuhay! Diagnostic Complete | ${major}</p>
+      <p style="margin: 5px 0 0; font-size: 10px; letter-spacing: 4px; font-weight: bold; text-transform: uppercase;">Diagnostic Complete | ${major}</p>
     </div>
   `;
 
   const content = `
     <div style="padding: 20px; font-family: sans-serif; color: #333; line-height: 1.6;">
-      <p style="font-size: 16px;"><strong>Mabuhay!</strong> Your new study module <strong>"${moduleTitle}"</strong> has been synchronized.</p>
+      <p style="font-size: 16px;">Your new study module <strong>"${moduleTitle}"</strong> has been synchronized.</p>
       
       <div style="background-color: #f9f9f9; border: 1px solid #D4AF37; padding: 15px; margin: 20px 0; border-radius: 4px;">
         <h2 style="margin-top: 0; color: #000; font-size: 18px;">📊 Initial Diagnostic Result</h2>

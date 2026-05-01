@@ -4,9 +4,7 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   GoogleAuthProvider, 
-  signInWithPopup, 
-  signInWithRedirect, 
-  getRedirectResult 
+  signInWithPopup 
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'motion/react';
@@ -25,50 +23,6 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
   const [error, setError] = useState<string | null>(null);
   const [department, setDepartment] = useState('');
 
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          setGoogleLoading(true);
-          const savedDept = localStorage.getItem('onboarding_dept');
-          
-          const userRef = doc(db, 'users', result.user.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              displayName: result.user.displayName,
-              email: result.user.email,
-              major: savedDept || 'CCS',
-              streak: 0,
-              readiness: 0,
-              createdAt: serverTimestamp()
-            });
-
-            const roleRef = doc(db, 'roles', result.user.uid);
-            const roleSnap = await getDoc(roleRef);
-            if (!roleSnap.exists()) {
-              await setDoc(roleRef, {
-                role: 'student',
-                updatedAt: serverTimestamp()
-              });
-            }
-          }
-          localStorage.removeItem('onboarding_dept');
-          onSuccess();
-        }
-      } catch (err: any) {
-        console.error("Redirect Error:", err);
-        setError('Verification failed. Please try signing in again.');
-      } finally {
-        setGoogleLoading(false);
-      }
-    };
-
-    handleRedirectResult();
-  }, [onSuccess]);
-
   const DEPARTMENTS = [
     'COE',
     'CCS',
@@ -78,55 +32,44 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
   ];
 
   const handleGoogleSignIn = async () => {
-    if (!department) {
-      setError('Please select your department for your first time sync.');
-      return;
-    }
-    
     setGoogleLoading(true);
     setError(null);
-    localStorage.setItem('onboarding_dept', department);
 
     try {
       const provider = new GoogleAuthProvider();
-      // Check if mobile or small screen
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+      // ALWAYS use popup for better compatibility in sandboxed iframes
+      const result = await signInWithPopup(auth, provider);
       
-      if (isMobile) {
-        await signInWithRedirect(auth, provider);
-        // Page will redirect, no need for further logic here
-      } else {
-        const result = await signInWithPopup(auth, provider);
-        if (result.user) {
-          // Initialize user stats if they don't exist
-          const userRef = doc(db, 'users', result.user.uid);
-          const userSnap = await getDoc(userRef);
-          if (!userSnap.exists()) {
-            await setDoc(userRef, {
-              displayName: result.user.displayName,
-              email: result.user.email,
-              major: department,
-              streak: 0,
-              readiness: 0,
-              createdAt: serverTimestamp()
-            });
+      if (result.user) {
+        // Initialize user doc if they are new, otherwise just let them in
+        const userRef = doc(db, 'users', result.user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            displayName: result.user.displayName,
+            email: result.user.email,
+            major: department || 'CCS',
+            streak: 0,
+            readiness: 0,
+            createdAt: serverTimestamp()
+          });
 
-            // Ensure role exists
-            const roleRef = doc(db, 'roles', result.user.uid);
-            const roleSnap = await getDoc(roleRef);
-            if (!roleSnap.exists()) {
-              await setDoc(roleRef, {
-                role: 'student',
-                updatedAt: serverTimestamp()
-              });
-            }
-          }
-          onSuccess();
+          // Default role for new users
+          await setDoc(doc(db, 'roles', result.user.uid), {
+            role: 'student',
+            updatedAt: serverTimestamp()
+          });
         }
+        onSuccess();
       }
     } catch (err: any) {
       console.error("Google Auth Error:", err);
-      setError('Google sign-in failed. Please try again.');
+      if (err.code === 'auth/popup-blocked') {
+        setError('Popup blocked. Please allow popups for this site.');
+      } else {
+        setError('Google sign-in failed. Please try again.');
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -161,7 +104,7 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
 
       <form onSubmit={handleSignIn} className="space-y-6">
         <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Email</label>
+          <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Student Email</label>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
             <input 
@@ -169,7 +112,7 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-glass border border-border p-4 pl-12 focus:border-accent outline-none transition-all rounded-sm text-sm"
-              placeholder="student@qcu.edu.ph"
+              placeholder="student@qc.edu.ph"
               required
             />
           </div>
@@ -252,7 +195,7 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
           onClick={onNavigateToSignUp}
           className="text-[10px] uppercase tracking-widest text-text-secondary hover:text-accent transition-colors"
         >
-          New QCU student? <span className="text-accent font-bold">Register here</span>
+          New student? <span className="text-accent font-bold">Register here</span>
         </button>
       </div>
     </motion.div>

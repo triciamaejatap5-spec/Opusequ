@@ -11,18 +11,21 @@ export const isGeminiConfigured = !!AI_KEY && AI_KEY !== "undefined";
  * This replaces the legacy fetch-based extraction to ensure reliability and compatibility.
  */
 export async function extractContentFromFile(base64Data: string, fileType: string, fileName: string) {
-  const prompt = `Analyze this academic file: "${fileName}".
+  const prompt = `Persona: You are the core AI engine for "Opusequ" (from 'Opus' for task and 'Aequus' for balance). You are a specialized academic coach for working students in Quezon City (QC).
   
-  CORE MISSION: Perform a high-fidelity "Full Context Topic Review" extraction. 
-  Your goal is to transcribe and define EVERY major topic found in the source material.
+  Analyze this academic file: "${fileName}".
+  
+  CORE MISSION: Perform a high-fidelity "Full Context Topic Review" extraction optimized for micro-learning.
+  Your goal is to transcribe and define major topics into "bite-sized" sections that take 10-15 minutes to review—perfect for student commutes.
   
   DIRECTIONS:
-  1. No Summary: Do not summarize the whole document. Instead, extract the specific lessons.
-  2. Topic List: Identify and list EVERY major concept (e.g., Basketball Definition, History of the Game, Basic Rules, Court Dimensions).
-  3. Format: Use a **Bold Heading** for each topic name.
-  4. Explanation: Follow each heading with a 2-3 sentence 'Brief Explanation' that defines the topic accurately based on the text.
-  5. Structure: Use a clean, organized list with bullet points where appropriate.
-  6. Tone: Educational, concise, and academic.
+  1. Micro-Learning Focus: Extract specific lessons into digestible blocks.
+  2. Professional Tone: Use a tone that is encouraging, efficient, and empathetic toward the QC working student hustle.
+  3. Topic List: Identify and list major concepts.
+  4. Format: Use a **Bold Heading** for each topic name.
+  5. Explanation: Follow each heading with a 2-3 sentence 'Brief Explanation' that defines the topic accurately.
+  6. Language: Use professional English exclusively.
+  7. Structure: Use a clean, organized list.
   
   CRITICAL: At the very end, provide exactly one line: "DIAGNOSTIC_WEIGHT: 21/25".`;
 
@@ -78,10 +81,12 @@ export async function extractContentFromFile(base64Data: string, fileType: strin
  * Generates quiz questions based on extracted content.
  */
 export async function generateInitialQuiz(title: string, content: string) {
-  const prompt = `Generate 25 multiple-choice questions for a "Diagnostic Quiz" based on this Full Context Topic Review: ${title}.
+  const prompt = `Persona: Opusequ QC Academic Coach.
+  Generate 25 multiple-choice questions for a "Micro-Diagnostic Quiz" based on this topic review: ${title}.
   Review Content: ${content}
   
-  GOAL: Ensure the quiz specifically targets the key lessons and facts captured in the 'Brief Explanations' of each topic in the review.
+  GOAL: Create high-impact questions designed for a 10-minute commute session.
+  Language: Professional English only.
   Format: Return ONLY a raw JSON array of objects with keys: question, options (array of 4 strings), correctAnswer (index 0-3), explanation.`;
 
   try {

@@ -35,7 +35,7 @@ export default function PremiumModal({ isOpen, onClose, reason }: PremiumModalPr
       name: 'Yearly Excellence',
       price: '₱2,199',
       period: '/year',
-      features: ['All Premium Features', 'Custom Study Roadmap', 'Exclusive QCU Assets', 'Save ₱189/year'],
+      features: ['All Premium Features', 'Custom Study Roadmap', 'Exclusive QC Assets', 'Save ₱189/year'],
       tag: 'Best Value',
       highlight: true
     }

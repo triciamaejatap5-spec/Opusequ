@@ -24,7 +24,7 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
           >
             <h1 className="text-6xl font-bold italic text-accent tracking-tighter">Opusequ</h1>
             <p className="text-text-secondary text-xs uppercase tracking-[3px] font-bold mt-2">
-              SDG 4: Quality Education
+              SDG 4: Quality Education in QC
             </p>
           </motion.div>
           <motion.p 
@@ -33,7 +33,7 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
             transition={{ delay: 0.3 }}
             className="text-sm font-serif italic text-text-secondary leading-relaxed border-l-2 border-accent pl-4"
           >
-            Balancing Task and Balance for the QCU Student-Worker.
+            For the QC Working Student: Balancing tasks and studies with Aequus.
           </motion.p>
         </header>
 
@@ -46,7 +46,7 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
         >
           <h2 className="text-[10px] uppercase tracking-[4px] text-text-secondary font-bold">Our Mission</h2>
           <p className="text-sm leading-relaxed serif">
-            Opusequ is designed to help you synchronize rigid work shifts with academic goals through micro-learning, automated scheduling, and exam readiness tracking.
+            Empowering Quezon City Working Students to balance rigid work shifts and academic goals through micro-learning and automated scheduling.
           </p>
         </motion.section>
 
@@ -64,15 +64,15 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
               <Zap className="text-accent shrink-0 mt-1" size={20} />
               <div className="space-y-1">
                 <h3 className="text-xs font-bold uppercase tracking-widest">Bite-Sized Quizzes</h3>
-                <p className="text-[10px] text-text-secondary italic leading-relaxed">Quick, high-impact 5-minute study sprints designed for busy shifts.</p>
+                <p className="text-[10px] text-text-secondary italic leading-relaxed">Quick 5-minute study sprints designed for your work breaks.</p>
               </div>
             </div>
             
             <div className="flex items-start gap-4 p-4 border border-border bg-accent/5 rounded-sm">
               <Sparkles className="text-accent shrink-0 mt-1" size={20} />
               <div className="space-y-1">
-                <h3 className="text-xs font-bold uppercase tracking-widest">AI Assistant</h3>
-                <p className="text-[10px] text-text-secondary italic leading-relaxed">24/7 academic support to explain complex concepts instantly.</p>
+                <h3 className="text-xs font-bold uppercase tracking-widest">AI Academic Coach</h3>
+                <p className="text-[10px] text-text-secondary italic leading-relaxed">Your 24/7 academic advisor. Ask and get answers instantly.</p>
               </div>
             </div>
           </div>
@@ -88,10 +88,10 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
           >
             <div className="flex items-center gap-3 text-accent">
               <Calendar size={20} />
-              <h3 className="text-xs uppercase tracking-widest font-bold">Task (Opus)</h3>
+              <h3 className="text-xs uppercase tracking-widest font-bold">Opus</h3>
             </div>
             <p className="text-[11px] text-text-secondary italic">
-              Stay organized with synchronized work-study calendars. Never miss a deadline or a shift.
+              Never miss a deadline or shift schedule. Get reminders right before your commute.
             </p>
           </motion.div>
 
@@ -103,10 +103,10 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
           >
             <div className="flex items-center gap-3 text-accent">
               <Sparkles size={20} />
-              <h3 className="text-xs uppercase tracking-widest font-bold">Balance (Aequus)</h3>
+              <h3 className="text-xs uppercase tracking-widest font-bold">Aequus</h3>
             </div>
             <p className="text-[11px] text-text-secondary italic">
-              Achieve academic success without the burnout. Smart algorithms suggest the best study windows.
+              Study smarter without the burnout. Our algorithm finds the best study windows in your schedule.
             </p>
           </motion.div>
         </div>
@@ -123,12 +123,12 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
           onClick={onGetStarted}
           className="w-full bg-accent text-bg py-5 rounded-sm font-bold uppercase tracking-[4px] flex items-center justify-center gap-3 group transition-all active:scale-[0.98] shadow-lg shadow-accent/10"
         >
-          Get Started
+          Begin Your Success
           <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
         <div className="mt-4 text-center">
             <span className="text-[9px] uppercase tracking-widest text-text-secondary opacity-40 font-bold">
-                Optimized for Quezon City University Students
+                Optimizing the future for QC Working Students
             </span>
         </div>
       </motion.div>

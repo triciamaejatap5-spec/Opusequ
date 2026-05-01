@@ -317,7 +317,7 @@ export default function AdminPortal() {
              <Building2 size={16} />
            </div>
            <p className="text-[10px] text-text-secondary font-medium tracking-wide">
-             Institutional mode active. You are viewing student data under QCU security protocols.
+             Institutional mode active. You are viewing student data under QC security protocols.
            </p>
         </div>
       </footer>

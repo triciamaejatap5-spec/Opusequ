@@ -48,7 +48,7 @@ export default function Assistant({ onExit, usageCount, isPremium, onLimitReache
           {
             id: 'welcome',
             role: 'assistant',
-            text: "Mabuhay! I am your Opusequ AI Assistant. Need a definition, a concept explained, or a quick fact check from your QCU modules? I'll remember our conversation for you.",
+            text: "Welcome! I am your Opusequ AI Academic Coach. Do you need clarification on your modules? I am here to help you prepare for your audits and exams. I'll remember our conversation for you.",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ]);
@@ -111,11 +111,11 @@ export default function Assistant({ onExit, usageCount, isPremium, onLimitReache
         model: 'gemini-3-flash-preview',
         contents: currentInput,
         config: {
-          systemInstruction: "You are the Opusequ AI Assistant, the core academic engine for working QCUians. Be exceptionally action-oriented, empathetic, and expert. Use QCU-specific encouragement. Respond concisely so students can back-read easily. Maintain the conversational context.",
+          systemInstruction: "You are the Opusequ AI Assistant, the core academic engine for working students in Quezon City. Be exceptionally action-oriented, empathetic, and professional. Provide concise academic advice and encouragement. Maintain conversational context and focus on academic success.",
         }
       });
 
-      const aiText = response.text || "I couldn't process that. Please try again, student.";
+      const aiText = response.text || "I apologize, but I am unable to process your request at the moment. Please try again later.";
 
       // Save AI Message
       await addDoc(collection(db, 'users', user.uid, 'chats'), {
@@ -130,7 +130,7 @@ export default function Assistant({ onExit, usageCount, isPremium, onLimitReache
       await addDoc(collection(db, 'users', user.uid, 'chats'), {
         userId: user.uid,
         role: 'assistant',
-        text: "My connection to the QCU archives is currently unstable. Please check your data connection.",
+        text: "My connection to the academic archives is currently unstable. Please check your data connection.",
         timestamp: serverTimestamp()
       });
     } finally {
@@ -148,7 +148,7 @@ export default function Assistant({ onExit, usageCount, isPremium, onLimitReache
             </button>
           )}
           <div>
-            <h2 className="text-3xl italic">AI Assistant</h2>
+            <h2 className="text-3xl italic">Lumen AI</h2>
             <p className="text-text-secondary text-[10px] uppercase tracking-widest mt-1">Real-time Academic Intelligence</p>
           </div>
         </div>
