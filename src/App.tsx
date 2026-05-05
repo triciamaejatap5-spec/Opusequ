@@ -300,7 +300,7 @@ const Dashboard = ({
               <Sparkles size={20} />
             </div>
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">OPUS (Work)</h3>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">AI ASSISTANT</h3>
               <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Ask AI Assistant</p>
               <p className="text-[8px] uppercase tracking-widest text-text-secondary opacity-60">Real-time Shift & Study Support</p>
             </div>
@@ -312,7 +312,7 @@ const Dashboard = ({
               <Zap size={20} fill="currentColor" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">AEQUUS (Balance)</h3>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">BEGIN 5-MIN SPRINT</h3>
               <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Begin 5-Min Sprint</p>
               <p className="text-[8px] uppercase tracking-widest text-text-secondary opacity-60">
                  Maximize your gap. Every second counts toward your Aequus score.
