@@ -17,8 +17,6 @@ interface SignUpProps {
 export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'student' | 'admin'>('student');
-  const [department, setDepartment] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,19 +25,7 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
     // No redirect logic needed as we use popups for stability
   }, []);
 
-  const DEPARTMENTS = [
-    'COE',
-    'CCS',
-    'COB',
-    'COA',
-    'CEd'
-  ];
-
   const handleGoogleSignIn = async () => {
-    if (!department && role === 'student') {
-      setError('Please select your department.');
-      return;
-    }
     setGoogleLoading(true);
     setError(null);
 
@@ -56,18 +42,18 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
           await setDoc(userRef, {
             displayName: result.user.displayName,
             email: result.user.email,
-            major: department,
+            major: 'Engineering',
             yearLevel: '',
-            status: 'QC Working Student',
+            status: 'QC WORKING STUDENT',
             streak: 0,
             readiness: 0,
-            isPremium: true,
+            isPremium: false,
             createdAt: serverTimestamp()
           });
 
           // Save Role for Google users
           await setDoc(doc(db, 'roles', result.user.uid), {
-            role: role,
+            role: 'student',
             updatedAt: serverTimestamp()
           });
         }
@@ -88,35 +74,28 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
   // Strictly popup based auth for stability
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault();
-    if (!department && role === 'student') {
-      setError('Please select your department.');
-      return;
-    }
     setLoading(true);
     setError(null);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // After signUp(), we don't redirect to the dashboard immediately.
-      // We send verification and sign out to ensure they can't access private pages yet.
-      // This matches the "session is null" redirection logic requested.
       if (userCredential.user) {
         // Initialize User Doc
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email: email,
-          major: department,
+          major: 'Engineering',
           yearLevel: '',
-          status: 'QC Working Student',
+          status: 'QC WORKING STUDENT',
           streak: 0,
           readiness: 0,
-          isPremium: true,
+          isPremium: false,
           createdAt: serverTimestamp()
         });
 
         // Save Role
         await setDoc(doc(db, 'roles', userCredential.user.uid), {
-          role: role, // 'student' or 'admin'
+          role: 'student',
           updatedAt: serverTimestamp()
         });
 
@@ -175,41 +154,6 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
               placeholder="••••••••"
               required
             />
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Department</label>
-          <select 
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            className="w-full bg-glass border border-border p-4 focus:border-accent outline-none transition-all rounded-sm text-sm text-text-primary h-[54px]"
-            required={role === 'student'}
-          >
-            <option value="" className="bg-bg">Select Department</option>
-            {DEPARTMENTS.map(dept => (
-              <option key={dept} value={dept} className="bg-bg">{dept}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Your Role</label>
-          <div className="flex gap-2">
-            <button 
-              type="button"
-              onClick={() => setRole('student')}
-              className={`flex-1 p-4 border transition-all rounded-sm text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 ${role === 'student' ? 'bg-accent/10 border-accent text-accent' : 'border-border text-text-secondary'}`}
-            >
-              <User size={14} /> Student
-            </button>
-            <button 
-              type="button"
-              onClick={() => setRole('admin')}
-              className={`flex-1 p-4 border transition-all rounded-sm text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 ${role === 'admin' ? 'bg-accent/10 border-accent text-accent' : 'border-border text-text-secondary'}`}
-            >
-              <Sparkles size={14} /> Admin
-            </button>
           </div>
         </div>
 

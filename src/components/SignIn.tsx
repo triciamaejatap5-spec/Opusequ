@@ -21,15 +21,6 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [department, setDepartment] = useState('');
-
-  const DEPARTMENTS = [
-    'COE',
-    'CCS',
-    'COB',
-    'COA',
-    'CEd'
-  ];
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -49,9 +40,11 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
           await setDoc(userRef, {
             displayName: result.user.displayName,
             email: result.user.email,
-            major: department || 'CCS',
+            major: 'Engineering',
+            status: 'QC WORKING STUDENT',
             streak: 0,
             readiness: 0,
+            isPremium: false,
             createdAt: serverTimestamp()
           });
 
@@ -156,20 +149,6 @@ export default function SignIn({ onSuccess, onNavigateToSignUp }: SignInProps) {
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-widest text-text-secondary font-bold px-1">Department (Required for Google)</label>
-            <select 
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full bg-glass border border-border p-4 focus:border-accent outline-none transition-all rounded-sm text-sm text-text-primary h-[54px]"
-            >
-              <option value="" className="bg-bg">Select Department</option>
-              {DEPARTMENTS.map(dept => (
-                <option key={dept} value={dept} className="bg-bg">{dept}</option>
-              ))}
-            </select>
-          </div>
-
           <button 
             type="button"
             onClick={handleGoogleSignIn}

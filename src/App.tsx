@@ -38,6 +38,7 @@ import {
   TrendingUp,
   Bell,
   Sparkles,
+  ChevronRight,
   X,
   LineChart as LineChartIcon,
   Bus,
@@ -96,7 +97,7 @@ const ReadinessCalendar = ({ statsData }: { statsData: any[] }) => {
     if (readiness === undefined) return '#1A1A1A'; // Gray
     if (readiness >= 90) return '#007DFE'; // Blue
     if (readiness >= 75) return '#7ED321'; // Green
-    if (readiness >= 50) return '#FFB900'; // Yellow
+    if (readiness >= 50) return '#FFD700'; // QCU Gold
     return '#FF5252'; // Red
   };
 
@@ -213,7 +214,7 @@ const Dashboard = ({
   const getReadinessColor = (val: number) => {
     if (val >= 90) return '#007DFE'; // Blue
     if (val >= 75) return '#7ED321'; // Green
-    if (val >= 50) return '#FFB900'; // Yellow
+    if (val >= 50) return '#FFD700'; // QCU Gold
     return '#FF5252'; // Red
   };
 
@@ -238,9 +239,9 @@ const Dashboard = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="p-4 sm:p-8 space-y-8 sm:space-y-10 pb-36 max-w-lg mx-auto"
+      className="h-full flex flex-col max-w-lg mx-auto bg-bg relative overflow-hidden"
     >
-      <header className="space-y-4 border-b border-border pb-8">
+      <header className="sticky top-0 bg-bg/95 backdrop-blur-md z-30 space-y-4 border-b border-border pb-8 pt-4 px-4 sm:px-8">
         <div className="flex justify-between items-start">
           <div className="flex gap-4 items-center">
             <div className="w-12 h-12 rounded-full border border-accent overflow-hidden bg-surface shrink-0 relative">
@@ -253,10 +254,23 @@ const Dashboard = ({
               )}
             </div>
             <div className="space-y-1 text-left">
-              <span className="status-pill leading-none py-1.5 h-auto">Coach Active</span>
               <h1 className="text-2xl sm:text-3xl leading-tight">Welcome, {userData?.displayName?.split(' ')[0] || 'Student'}.</h1>
               <p className="text-text-secondary text-[10px] uppercase tracking-widest font-medium">
-                {userData?.major || 'COE'} | {userData?.status || 'QC Working Student'}
+                {userData?.major || 'Engineering'}
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FFD700' }}>
+                {(() => {
+                  const major = userData?.major;
+                  if (!major) return 'Padayon, Future Professional!';
+                  if (major === 'Engineering') return 'Padayon, Future Engineer!';
+                  if (major === 'Architecture') return 'Padayon, Future Architect!';
+                  if (major === 'Nursing') return 'Padayon, Future Nurse!';
+                  if (major === 'Education') return 'Padayon, Future Educator!';
+                  if (major === 'Accountancy') return 'Padayon, Future CPA!';
+                  if (major === 'Criminology') return 'Padayon, Future Criminologist!';
+                  if (major === 'Information Technology' || major === 'Computer Science') return 'Padayon, Future Tech Professional!';
+                  return 'Padayon, Future Professional!';
+                })()}
               </p>
             </div>
           </div>
@@ -277,6 +291,36 @@ const Dashboard = ({
           </p>
         </div>
       </header>
+
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 sm:space-y-10 pb-36 scrollbar-hide">
+        {/* OPUS and AEQUUS CARDS - SHIFTED UP */}
+        <div className="grid grid-cols-1 gap-4">
+          <div className="bg-surface border border-accent p-5 rounded-sm flex gap-4 items-center group cursor-pointer hover:bg-accent/5 transition-all" onClick={() => onNavigate('oracle')}>
+            <div className="p-3 bg-accent text-bg rounded-sm shadow-lg group-hover:scale-110 transition-transform">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">OPUS (Work)</h3>
+              <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Ask AI Assistant</p>
+              <p className="text-[8px] uppercase tracking-widest text-text-secondary opacity-60">Real-time Shift & Study Support</p>
+            </div>
+            <ChevronRight size={16} className="ml-auto text-text-secondary opacity-30 group-hover:text-accent group-hover:opacity-100 transition-all" />
+          </div>
+
+          <div className="bg-surface border border-accent p-5 rounded-sm flex gap-4 items-center group cursor-pointer hover:bg-accent/5 transition-all" onClick={() => onNavigate('learning')}>
+            <div className="p-3 bg-bg border border-accent text-accent rounded-sm shadow-lg group-hover:scale-110 transition-transform">
+              <Zap size={20} fill="currentColor" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">AEQUUS (Balance)</h3>
+              <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Begin 5-Min Sprint</p>
+              <p className="text-[8px] uppercase tracking-widest text-text-secondary opacity-60">
+                 Maximize your gap. Every second counts toward your Aequus score.
+              </p>
+            </div>
+            <ChevronRight size={16} className="ml-auto text-text-secondary opacity-30 group-hover:text-accent group-hover:opacity-100 transition-all" />
+          </div>
+        </div>
 
       {/* UNFINISHED SPRINT Alert - HIGH PRIORITY PERSISTENT */}
       {unfinishedQuizzes.length > 0 && (
@@ -320,7 +364,7 @@ const Dashboard = ({
              {[
                { label: 'Excl', range: '90-100%', color: '#007DFE' },
                { label: 'Good', range: '75-89%', color: '#7ED321' },
-               { label: 'Avg', range: '50-74%', color: '#FFB900' },
+               { label: 'Avg', range: '50-74%', color: '#FFD700' },
                { label: 'Focus', range: '<50%', color: '#FF5252' },
                { label: 'Null', range: 'N/A', color: '#1A1A1A' }
              ].map(item => (
@@ -517,35 +561,7 @@ const Dashboard = ({
           )}
         </div>
       </section>
-
-      {/* Oracle Quick Search */}
-      <div className="bg-surface border border-accent p-5 rounded-sm flex gap-4 items-center group cursor-pointer hover:bg-accent/5 transition-all" onClick={() => onNavigate('oracle')}>
-        <div className="p-2 bg-accent text-bg rounded-sm group-hover:scale-110 transition-transform">
-          <Sparkles size={18} />
-        </div>
-        <div className="flex-1">
-          <p className="text-[10px] sm:text-[11px] uppercase tracking-widest text-accent font-bold">Ask AI Assistant</p>
-          <p className="text-xs text-text-secondary italic">Concepts, definitions, or module search...</p>
-        </div>
-        <ArrowRight size={14} className="text-accent opacity-40 shrink-0" />
       </div>
-
-      {/* Golden Study Window Identification */}
-      <motion.div 
-        whileTap={{ scale: 0.99 }}
-        onClick={() => onNavigate('learning')}
-        className="bg-glass border border-accent/20 p-5 sm:p-6 rounded-sm flex gap-4 sm:gap-6 items-start cursor-pointer hover:border-accent transition-all group"
-      >
-        <div className="p-2 sm:p-3 border border-border group-hover:border-accent text-accent transition-colors shrink-0">
-          <Zap className="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="currentColor" />
-        </div>
-        <div className="flex-1 space-y-2 text-left">
-          <h3 className="text-accent text-[10px] sm:text-xs uppercase tracking-[2px] font-bold">Begin 5-Min Sprint</h3>
-          <p className="text-xs sm:text-sm text-text-secondary leading-relaxed font-normal italic">
-            Maximize your gap. Every second counts toward your Aequus score.
-          </p>
-        </div>
-      </motion.div>
     </motion.div>
   );
 };
@@ -659,6 +675,7 @@ export default function App() {
   const unsubDraftsRef = useRef<(() => void) | null>(null);
   const unsubAttemptsRef = useRef<(() => void) | null>(null);
   const unsubCacheRef = useRef<(() => void) | null>(null);
+  const usageIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastNotificationCounts = useRef<{ tomorrow: number, pending: number, drafts: number, localDrafts: number }>({ tomorrow: -1, pending: -1, drafts: -1, localDrafts: -1 });
 
   const connectGmail = async () => {
@@ -839,17 +856,25 @@ export default function App() {
       console.error("User Profile Sync Failure", error);
     });
 
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    unsubUsageRef.current = onSnapshot(doc(db, 'users', user.uid, 'daily_usage', todayStr), (snap) => {
-      if (snap.exists()) {
-        setUsageData(snap.data());
-      } else {
-        setUsageData({ quizzes: 0, uploads: 0, ai: 0, notes: 0 });
-      }
-      checkSyncComplete();
-    }, (error) => {
-      console.error("Usage Sync Failure", error);
-    });
+    const setupUsageListener = () => {
+      const todayStr = new Date().toLocaleDateString('en-CA');
+      if (unsubUsageRef.current) unsubUsageRef.current();
+      unsubUsageRef.current = onSnapshot(doc(db, 'users', user.uid, 'daily_usage', todayStr), (snap) => {
+        if (snap.exists()) {
+          setUsageData(snap.data());
+        } else {
+          setUsageData({ quizzes: 0, uploads: 0, ai: 0, notes: 0, schedules: 0 });
+        }
+        checkSyncComplete();
+      }, (error) => {
+        console.error("Usage Sync Failure", error);
+      });
+    };
+
+    setupUsageListener();
+    if (usageIntervalRef.current) clearInterval(usageIntervalRef.current);
+    usageIntervalRef.current = setInterval(setupUsageListener, 60000); 
+
 
     unsubRoleRef.current = onSnapshot(doc(db, 'roles', user.uid), (snap) => {
       if (snap.exists()) {
@@ -1053,6 +1078,10 @@ export default function App() {
 
   const cleanupListeners = () => {
     // This is the "Force-Disconnect" rule implementation
+    if (usageIntervalRef.current) {
+      clearInterval(usageIntervalRef.current);
+      usageIntervalRef.current = null;
+    }
     unsubUserRef.current?.();
     unsubUsageRef.current?.();
     unsubRoleRef.current?.();
@@ -1128,19 +1157,26 @@ export default function App() {
           firestoreCache={firestoreCache}
         />
       );
-      case 'schedule': return <Scheduler onExit={handleExit} />;
+      case 'schedule': return (
+        <Scheduler 
+          onExit={handleExit} 
+          isPremium={userData?.isPremium} 
+          usageCount={usageData?.schedules || 0}
+          onLimitReached={(reason) => setPremiumModal({ isOpen: true, reason })}
+        />
+      );
       case 'learning': return (
         <MicroQuiz 
           onComplete={handleQuizComplete} 
           onExit={handleExit} 
           usageCount={usageData?.quizzes || 0}
-          isPremium={true} // DEVELOPER MODE: Unrestricted Access
+          isPremium={userData?.isPremium} 
           allStats={quizAttempts}
           firestoreCache={firestoreCache}
           onDraftSave={saveQuizDraft}
           onDraftDelete={deleteQuizDraft}
           existingDrafts={unfinishedQuizzes}
-          onLimitReached={() => setPremiumModal({ isOpen: true, reason: "Daily quiz limit reached" })}
+          onLimitReached={(reason) => setPremiumModal({ isOpen: true, reason })}
         />
       );
       case 'progress': return (
@@ -1155,15 +1191,16 @@ export default function App() {
           onExit={handleExit} 
           uploadCount={usageData?.uploads || 0}
           noteCount={usageData?.notes || 0}
-          isPremium={true} // DEVELOPER MODE: Unrestricted Access
+          isPremium={userData?.isPremium} 
           onLimitReached={(reason) => setPremiumModal({ isOpen: true, reason })}
+          quizAttempts={quizAttempts}
         />
       );
       case 'oracle': return (
         <Assistant 
           onExit={handleExit} 
           usageCount={usageData?.ai || 0}
-          isPremium={true} // DEVELOPER MODE: Unrestricted Access
+          isPremium={userData?.isPremium} 
           onLimitReached={(reason) => setPremiumModal({ isOpen: true, reason: reason || "Daily AI assistant limit reached" })}
         />
       );
@@ -1174,8 +1211,6 @@ export default function App() {
           onExit={handleExit} 
           setNotification={(msg, sub) => setNotification({ message: msg, sub: sub || '' })}
           cleanupListeners={cleanupListeners}
-          isGmailConnected={isGmailConnected}
-          connectGmail={connectGmail}
         />
       );
       default: return (

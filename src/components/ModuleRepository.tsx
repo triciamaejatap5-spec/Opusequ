@@ -27,6 +27,7 @@ import { extractContentFromFile, generateInitialQuiz } from '../services/geminiS
 import { sendGmailEmail, formatDiagnosticEmail } from '../services/gmailService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import mammoth from 'mammoth';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -40,9 +41,10 @@ interface ModuleRepositoryProps {
   noteCount: number;
   isPremium?: boolean;
   onLimitReached: (reason: string) => void;
+  quizAttempts?: any[];
 }
 
-export default function ModuleRepository({ onExit, uploadCount, noteCount, isPremium, onLimitReached }: ModuleRepositoryProps) {
+export default function ModuleRepository({ onExit, uploadCount, noteCount, isPremium, onLimitReached, quizAttempts = [] }: ModuleRepositoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModule, setSelectedModule] = useState<any | null>(null);
@@ -226,8 +228,8 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       return;
     }
 
-    if (!isPremium && uploadCount >= 3) {
-      onLimitReached("Daily upload limit reached");
+    if (!isPremium && (uploadCount + noteCount >= 3 || docs.length >= 3)) {
+      onLimitReached("3-3-3-3 Trial Limit Reached: Daily file upload & study note capacity full.");
       return;
     }
 
@@ -240,20 +242,31 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     try {
       setNotification("Initializing High-Fidelity Extraction...");
       
-      // Convert file to Base64 locally - This is our primary pipeline now
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          if (result && result.includes(',')) {
-            resolve(result.split(',')[1]);
-          } else {
-            reject(new Error("Base64 conversion failed"));
-          }
-        };
-        reader.onerror = () => reject(new Error("FileReader error"));
-        reader.readAsDataURL(file);
-      });
+      let base64Data: string;
+      
+      if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        // Handle Docx via Mammoth
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        // Convert extracted text to base64 so geminiService can decode it
+        // Using a safer method for Unicode content
+        base64Data = btoa(unescape(encodeURIComponent(result.value)));
+      } else {
+        // Convert file to Base64 locally - This is our primary pipeline now
+        base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            if (result && result.includes(',')) {
+              resolve(result.split(',')[1]);
+            } else {
+              reject(new Error("Base64 conversion failed"));
+            }
+          };
+          reader.onerror = () => reject(new Error("FileReader error"));
+          reader.readAsDataURL(file);
+        });
+      }
       
       setIsProcessing(true);
       
@@ -276,6 +289,18 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
       
       setIsProcessing(false);
       setIsAddingModule(false);
+      // Increment usage count
+      if (!isPremium) {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const usageRef = doc(db, 'users', user.uid, 'daily_usage', todayStr);
+        const usageSnap = await getDoc(usageRef);
+        if (usageSnap.exists()) {
+          await updateDoc(usageRef, { uploads: (usageSnap.data().uploads || 0) + 1 });
+        } else {
+          await setDoc(usageRef, { quizzes: 0, uploads: 1, ai: 0, notes: 0, schedules: 0 });
+        }
+      }
+
       setNotification("Local sync active. Extracting knowledge...");
 
           // PHASE 2: Immediate Local Background Processing
@@ -574,9 +599,9 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
     const user = auth.currentUser;
     if (!user) return;
 
-    // Check Note Limit
-    if (!isPremium && newModule.type === 'note' && noteCount >= 3) {
-      onLimitReached("Daily Study Note limit reached");
+    // Check combined limit
+    if (!isPremium && (uploadCount + noteCount >= 3 || docs.length >= 3)) {
+      onLimitReached("3-3-3-3 Trial Limit Reached: Daily file upload & study note capacity full.");
       return;
     }
 
@@ -589,7 +614,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         const usageSnap = await getDoc(usageRef);
         
         if (!usageSnap.exists()) {
-          await setDoc(usageRef, { quizzes: 0, uploads: 0, ai: 0, notes: 1 });
+          await setDoc(usageRef, { quizzes: 0, uploads: 0, ai: 0, notes: 1, schedules: 0 });
         } else {
           await updateDoc(usageRef, { notes: (usageSnap.data().notes || 0) + 1 });
         }
@@ -682,7 +707,8 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
         </header>
 
         <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 px-1 scrollbar-hide flex flex-col">
-          {selectedModule.diagnosticScore && (
+          {/* INITIAL DIAGNOSTIC - UI Hidden as requested but logic preserved */} 
+          {false && selectedModule.diagnosticScore && (
             <div className="bg-accent/10 border border-accent/20 p-4 rounded-sm flex justify-between items-center relative z-20 shrink-0">
               <div className="flex items-center gap-3">
                 <TrendingUp className="text-accent" size={18} />
@@ -697,20 +723,24 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
               <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none">
                 <div className="text-[80px] font-serif italic text-accent select-none">Opusequ</div>
               </div>
-              <div className="flex justify-between items-center border-b border-accent/20 pb-4 relative z-10">
-                <div className="space-y-1">
-                  <h3 className="text-lg sm:text-xl font-serif italic text-accent tracking-wide">
-                    {selectedModule.status === 'processing' ? 'Reconstructing knowledge...' : 'QC Full Context Topic Review'}
-                  </h3>
-                  <p className="text-[8px] uppercase tracking-[3px] text-accent/60">
-                    {selectedModule.status === 'processing' ? 'Multi-Layer Extraction Protocol Active' : 'Verified Knowledge Archive'}
-                  </p>
+              
+              {/* TOPIC REVIEW HEADER - UI Hidden as requested */}
+              {false && (
+                <div className="flex justify-between items-center border-b border-accent/20 pb-4 relative z-10">
+                  <div className="space-y-1">
+                    <h3 className="text-lg sm:text-xl font-serif italic text-accent tracking-wide">
+                      {selectedModule.status === 'processing' ? 'Reconstructing knowledge...' : 'QC Full Context Topic Review'}
+                    </h3>
+                    <p className="text-[8px] uppercase tracking-[3px] text-accent/60">
+                      {selectedModule.status === 'processing' ? 'Multi-Layer Extraction Protocol Active' : 'Verified Knowledge Archive'}
+                    </p>
+                  </div>
+                  <div className="bg-accent/10 border border-accent/30 px-3 py-2 rounded-sm text-center shadow-[0_0_15px_rgba(212,175,55,0.05)]">
+                    <div className="text-[14px] font-bold text-accent">{selectedModule.diagnosticScore || "21/25"}</div>
+                    <div className="text-[7px] uppercase tracking-tighter text-accent/60 font-black">Raw Score</div>
+                  </div>
                 </div>
-                <div className="bg-accent/10 border border-accent/30 px-3 py-2 rounded-sm text-center shadow-[0_0_15px_rgba(212,175,55,0.05)]">
-                  <div className="text-[14px] font-bold text-accent">{selectedModule.diagnosticScore || "21/25"}</div>
-                  <div className="text-[7px] uppercase tracking-tighter text-accent/60 font-black">Raw Score</div>
-                </div>
-              </div>
+              )}
 
               <div className="markdown-body text-xs sm:text-sm serif leading-relaxed text-text-primary selection:bg-accent/30 selection:text-white relative z-10 antialiased font-medium prose prose-invert prose-sm max-w-none">
                 {selectedModule.content && selectedModule.content.trim() !== "" ? (
@@ -1035,9 +1065,14 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
                             Sync Error (Retry)
                           </button>
                         )}
-                        {item.diagnosticScore && item.status !== 'processing' && (
+                        {item.status !== 'processing' && item.status !== 'error' && (
                           <div className="flex items-center gap-1 text-[8px] text-accent uppercase tracking-widest font-black border border-accent/20 bg-accent/5 px-2 py-0.5 rounded-sm">
-                            <TrendingUp size={8} /> {item.diagnosticScore}
+                            {(() => {
+                              const attempts = quizAttempts.filter(a => a.moduleId === item.id || a.title === item.title);
+                              if (attempts.length === 0) return "No Quiz Taken";
+                              const bestScore = Math.max(...attempts.map(a => a.score || 0));
+                              return `${bestScore}% Mastery`;
+                            })()}
                           </div>
                         )}
                       </div>
@@ -1102,6 +1137,7 @@ export default function ModuleRepository({ onExit, uploadCount, noteCount, isPre
             )}
           </div>
         </section>
+        <div className="h-32 pointer-events-none" aria-hidden="true" />
       </div>
 
       <AnimatePresence>

@@ -24,7 +24,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 import { db, auth } from '../firebase';
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc, where } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc, where, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 interface Task {
   id: string;
@@ -37,9 +37,12 @@ interface Task {
 
 interface SchedulerProps {
   onExit: () => void;
+  isPremium?: boolean;
+  usageCount?: number;
+  onLimitReached?: (reason: string) => void;
 }
 
-export default function Scheduler({ onExit }: SchedulerProps) {
+export default function Scheduler({ onExit, isPremium, usageCount = 0, onLimitReached }: SchedulerProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,6 +84,12 @@ export default function Scheduler({ onExit }: SchedulerProps) {
       deadline: 'text-red-400'
     };
 
+    // Check limit
+    if (!isPremium && (usageCount >= 3 || tasks.length >= 3)) {
+      onLimitReached?.("3-3-3-3 Trial Limit Reached: Calendar & schedule capacity full.");
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'users', user.uid, 'schedules'), {
         ...newTask,
@@ -89,6 +98,19 @@ export default function Scheduler({ onExit }: SchedulerProps) {
         createdAt: serverTimestamp(),
         completed: false
       });
+
+      // Increment usage count
+      if (!isPremium) {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const usageRef = doc(db, 'users', user.uid, 'daily_usage', todayStr);
+        const usageSnap = await getDoc(usageRef);
+        if (usageSnap.exists()) {
+          await updateDoc(usageRef, { schedules: (usageSnap.data().schedules || 0) + 1 });
+        } else {
+          await setDoc(usageRef, { quizzes: 0, uploads: 0, ai: 0, notes: 0, schedules: 1 });
+        }
+      }
+
       setIsAdding(false);
       setNewTask({ ...newTask, title: '' });
     } catch (e) {

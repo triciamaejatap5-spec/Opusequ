@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Zap, Calendar, ArrowRight } from 'lucide-react';
+import { Sparkles, Zap, Calendar, ArrowRight, BookOpen } from 'lucide-react';
 
 interface IntroPageProps {
   onGetStarted: () => void;
@@ -73,6 +73,22 @@ export default function IntroPage({ onGetStarted }: IntroPageProps) {
               <div className="space-y-1">
                 <h3 className="text-xs font-bold uppercase tracking-widest">AI Academic Coach</h3>
                 <p className="text-[10px] text-text-secondary italic leading-relaxed">Your 24/7 academic advisor. Ask and get answers instantly.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 border border-border bg-accent/5 rounded-sm">
+              <Calendar className="text-accent shrink-0 mt-1" size={20} />
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold uppercase tracking-widest">Smart Schedules</h3>
+                <p className="text-[10px] text-text-secondary italic leading-relaxed">Visualize your work shifts and study goals in one unified view.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 border border-border bg-accent/5 rounded-sm">
+              <BookOpen className="text-accent shrink-0 mt-1" size={20} />
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold uppercase tracking-widest">Knowledge Archive</h3>
+                <p className="text-[10px] text-text-secondary italic leading-relaxed">Access all your uploaded modules and generated study materials instantly.</p>
               </div>
             </div>
           </div>

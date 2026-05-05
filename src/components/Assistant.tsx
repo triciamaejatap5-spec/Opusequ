@@ -74,7 +74,7 @@ export default function Assistant({ onExit, usageCount, isPremium, onLimitReache
     if (!input.trim() || isLoading) return;
 
     if (!isPremium && usageCount >= 3) {
-      onLimitReached("Daily AI assistant limit reached");
+      onLimitReached("3-3-3-3 Trial Limit Reached: Daily AI assistant capacity full.");
       return;
     }
 
@@ -93,7 +93,7 @@ export default function Assistant({ onExit, usageCount, isPremium, onLimitReache
         const usageSnap = await getDoc(usageRef);
         
         if (!usageSnap.exists()) {
-          await setDoc(usageRef, { quizzes: 0, uploads: 0, ai: 1, notes: 0 });
+          await setDoc(usageRef, { quizzes: 0, uploads: 0, ai: 1, notes: 0, schedules: 0 });
         } else {
           await updateDoc(usageRef, { ai: (usageSnap.data().ai || 0) + 1 });
         }

@@ -25,17 +25,17 @@ export default function PremiumModal({ isOpen, onClose, reason }: PremiumModalPr
   const plans = [
     {
       name: 'Monthly Sprint',
-      price: '₱199',
+      price: '₱99.00',
       period: '/month',
-      features: ['Unlimited Quizzes', 'Unlimited Uploads', 'Unlimited AI Oracle', 'Priority Support'],
+      features: ['Unlimited Quizzes', 'Unlimited Module Uploads', 'Unlimited AI Assistant', 'Unlimited Study Notes'],
       tag: 'Flexible',
       highlight: false
     },
     {
       name: 'Yearly Excellence',
-      price: '₱2,199',
+      price: '₱999.00',
       period: '/year',
-      features: ['All Premium Features', 'Custom Study Roadmap', 'Exclusive QC Assets', 'Save ₱189/year'],
+      features: ['All Premium Features', 'Custom Study Roadmap', 'Priority Gmail Alerts', 'Save ₱189/year'],
       tag: 'Best Value',
       highlight: true
     }
@@ -57,7 +57,8 @@ export default function PremiumModal({ isOpen, onClose, reason }: PremiumModalPr
       setTimeout(() => {
         setIsLoading(false);
         onClose();
-        window.location.reload(); // Refresh to sync status
+        // Skip page reload, just update local state if possible or keep reload for simplicity
+        window.location.reload(); 
       }, 1500);
     } catch (e) {
       console.error(e);
@@ -131,7 +132,7 @@ export default function PremiumModal({ isOpen, onClose, reason }: PremiumModalPr
                       onClick={handleSimulatePayment}
                       className="w-full bg-accent text-bg py-4 rounded-sm font-bold uppercase tracking-[4px] text-[10px] flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95"
                     >
-                      {isLoading ? <Loader2 size={16} className="animate-spin" /> : "I have paid P199.00"}
+                      {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Verify Payment"}
                     </button>
                   </div>
                 </motion.div>
@@ -154,15 +155,18 @@ export default function PremiumModal({ isOpen, onClose, reason }: PremiumModalPr
                       </button>
 
                       <div className="mx-auto w-12 h-12 bg-accent text-bg rounded-full flex items-center justify-center mb-4 shadow-lg shadow-accent/20">
-                        <Zap size={24} fill="currentColor" />
+                        <Crown size={24} fill="currentColor" />
                       </div>
 
-                      <h2 className="text-2xl italic mb-1">Upgrade to Aequus</h2>
-                      <p className="text-[9px] uppercase tracking-[3px] text-accent font-bold mb-3">
-                        {reason || "Freemium Limit Reached"}
+                      <h2 className="text-2xl font-serif italic mb-1 text-text-primary">Unlock Unlimited</h2>
+                      <div className="bg-accent text-bg text-[10px] uppercase tracking-[3px] font-bold py-2 px-4 rounded-sm inline-block mb-3 animate-pulse">
+                         3-3-3-3 Trial Capacity Reached
+                      </div>
+                      <p className="text-[12px] text-text-primary font-bold italic leading-relaxed max-w-[220px] mx-auto mb-2 px-4">
+                        {reason || "You've reached the free tier limit for this feature."}
                       </p>
-                      <p className="text-[10px] text-text-secondary leading-relaxed max-w-[220px] mx-auto opacity-70">
-                        Support high-quality education (SDG 4) and unlock your full potential as a working student.
+                      <p className="text-[10px] text-text-secondary leading-relaxed max-w-[220px] mx-auto opacity-70 italic">
+                        Achieve balance between your rigid work shifts and QC academic demands without limits.
                       </p>
                    </div>
 
@@ -200,19 +204,25 @@ export default function PremiumModal({ isOpen, onClose, reason }: PremiumModalPr
                     </div>
 
                     <div className="pt-4 border-t border-border space-y-4">
-                       <p className="text-[9px] uppercase tracking-[3px] text-center text-text-secondary font-bold">Standard Payment Flow</p>
+                       <p className="text-[9px] uppercase tracking-[3px] text-center text-text-secondary font-bold">Pay via GCash or Maya</p>
                        <div className="grid grid-cols-2 gap-2">
                           <button 
                             onClick={() => handlePaymentClick('GCash')}
-                            className="flex items-center justify-center gap-2 py-3 border border-border bg-glass rounded-sm hover:border-accent transition-all group"
+                            className="flex flex-col items-center justify-center gap-1.5 py-4 border border-border bg-glass rounded-sm hover:border-accent transition-all group relative overflow-hidden"
                           >
-                            <span className="text-[10px] font-bold text-text-secondary group-hover:text-accent">GCash</span>
+                            <div className="w-10 h-6 bg-[#007DFE] rounded-xs flex items-center justify-center shadow-lg">
+                              <span className="text-[7px] text-white font-black italic tracking-tighter">GCASH</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-text-secondary group-hover:text-accent">Open GCash</span>
                           </button>
                           <button 
                             onClick={() => handlePaymentClick('Maya')}
-                            className="flex items-center justify-center gap-2 py-3 border border-border bg-glass rounded-sm hover:border-accent transition-all group"
+                            className="flex flex-col items-center justify-center gap-1.5 py-4 border border-border bg-glass rounded-sm hover:border-accent transition-all group relative overflow-hidden"
                           >
-                            <span className="text-[10px] font-bold text-text-secondary group-hover:text-accent">Maya</span>
+                            <div className="w-10 h-6 bg-[#2ECC71] rounded-xs flex items-center justify-center shadow-lg">
+                              <span className="text-[7px] text-white font-black italic tracking-tighter">MAYA</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-text-secondary group-hover:text-accent">Open Maya</span>
                           </button>
                        </div>
                     </div>

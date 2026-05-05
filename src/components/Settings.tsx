@@ -20,8 +20,7 @@ import {
   GraduationCap,
   Wifi,
   RefreshCw,
-  AlertTriangle,
-  Mail
+  AlertTriangle
 } from 'lucide-react';
 import { terminate } from 'firebase/firestore';
 
@@ -31,11 +30,9 @@ interface SettingsProps {
   onExit?: () => void;
   setNotification: (message: string, sub?: string) => void;
   cleanupListeners: () => void;
-  isGmailConnected: boolean;
-  connectGmail: () => void;
 }
 
-export default function Settings({ theme, toggleTheme, onExit, setNotification, cleanupListeners, isGmailConnected, connectGmail }: SettingsProps) {
+export default function Settings({ theme, toggleTheme, onExit, setNotification, cleanupListeners }: SettingsProps) {
   const [notifications, setNotifications] = useState(true);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -43,9 +40,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [profileData, setProfileData] = useState({
     displayName: '',
-    yearLevel: '',
     major: '',
-    status: '',
     photoURL: ''
   });
 
@@ -58,9 +53,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
         const data = snap.data();
         setProfileData({
           displayName: data.displayName || user.displayName || '',
-          yearLevel: data.yearLevel || '',
           major: data.major || '',
-          status: data.status || 'QC Working Student',
           photoURL: data.photoURL || user.photoURL || ''
         });
       }
@@ -68,18 +61,23 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
     fetchProfile();
   }, []);
 
-  const DEPARTMENTS = [
-    'COE',
-    'CCS',
-    'COB',
-    'COA',
-    'CEd'
-  ];
-
-  const STATUS_OPTIONS = [
-    'QC Working Student',
-    'QC Full-Time Student',
-    'QC Alumni'
+  const COURSES = [
+    'Engineering',
+    'Architecture',
+    'Nursing',
+    'Information Technology',
+    'Computer Science',
+    'Education',
+    'Accountancy',
+    'Psychology',
+    'Criminology',
+    'Hospitality Management',
+    'Business Administration',
+    'Biology',
+    'Legal Management',
+    'Entrepreneurship',
+    'Tourism Management',
+    'Pharmacy'
   ];
 
   const handleSaveProfile = async () => {
@@ -89,9 +87,7 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
     try {
       await updateDoc(doc(db, 'users', user.uid), {
         displayName: profileData.displayName,
-        yearLevel: profileData.yearLevel,
         major: profileData.major,
-        status: profileData.status,
         photoURL: profileData.photoURL
       });
       await updateProfile(user, {
@@ -217,17 +213,6 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
       ]
     },
     {
-      title: 'Integrations',
-      items: [
-        { 
-          icon: <Mail size={18} className={isGmailConnected ? "text-accent" : "text-text-secondary"} />, 
-          label: 'Gmail Notifications', 
-          value: isGmailConnected ? 'Connected & Synced' : 'Sync your Gmail for high-priority alerts',
-          action: connectGmail
-        },
-      ]
-    },
-    {
       title: 'Preferences',
       items: [
         { 
@@ -329,41 +314,15 @@ export default function Settings({ theme, toggleTheme, onExit, setNotification, 
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-widest text-accent font-bold px-1">Academic Year</label>
-                  <select 
-                    value={profileData.yearLevel}
-                    onChange={e => setProfileData(prev => ({ ...prev, yearLevel: e.target.value }))}
-                    className="w-full bg-glass border border-border p-4 focus:border-accent outline-none rounded-sm text-sm"
-                  >
-                    <option value="">Select Year</option>
-                    <option value="1st Year">1st Year</option>
-                    <option value="2nd Year">2nd Year</option>
-                    <option value="3rd Year">3rd Year</option>
-                    <option value="4th Year">4th Year</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-widest text-accent font-bold px-1">College Department</label>
+                  <label className="text-[10px] uppercase tracking-widest text-accent font-bold px-1">Course</label>
                   <select 
                     value={profileData.major}
                     onChange={e => setProfileData(prev => ({ ...prev, major: e.target.value }))}
                     className="w-full bg-glass border border-border p-4 focus:border-accent outline-none rounded-sm text-sm text-text-primary h-[54px]"
                   >
-                    <option value="" className="bg-bg">Select College</option>
-                    {DEPARTMENTS.map(dept => (
-                      <option key={`dept-${dept}`} value={dept} className="bg-bg">{dept}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-widest text-accent font-bold px-1">Student/Work Status</label>
-                  <select 
-                    value={profileData.status}
-                    onChange={e => setProfileData(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full bg-glass border border-border p-4 focus:border-accent outline-none rounded-sm text-sm text-text-primary h-[54px]"
-                  >
-                    {STATUS_OPTIONS.map(status => (
-                      <option key={`status-${status}`} value={status} className="bg-bg">{status}</option>
+                    <option value="" className="bg-bg">Select Course</option>
+                    {COURSES.map(course => (
+                      <option key={`course-${course}`} value={course} className="bg-bg">{course}</option>
                     ))}
                   </select>
                 </div>

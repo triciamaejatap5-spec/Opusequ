@@ -33,6 +33,31 @@ export async function extractContentFromFile(base64Data: string, fileType: strin
     let normalizedMimeType = fileType;
     const extension = fileName.split('.').pop()?.toLowerCase();
     
+    // If it's a docx or a type that doesn't support inlineData directly,
+    // we assume base64Data is actually the extracted text (passed from component)
+    const isActuallyText = fileType === 'text/plain' || extension === 'docx';
+
+    if (isActuallyText) {
+      // For text, we don't send it as inlineData but as part of the prompt
+      // Safely decode Unicode content
+      const textContent = decodeURIComponent(escape(atob(base64Data)));
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [
+          { role: "user", parts: [{ text: `${prompt}\n\nCONTENT TO ANALYZE:\n${textContent}` }] }
+        ]
+      });
+
+      const text = response.text || "";
+      const weightMatch = text.match(/DIAGNOSTIC_WEIGHT: (\d+)\/25/);
+      const weight = weightMatch ? weightMatch[1] : "21";
+      
+      return {
+        content: text.replace(/DIAGNOSTIC_WEIGHT: .*/, "").trim(),
+        diagnosticScore: `${weight}/25`
+      };
+    }
+
     if (extension === 'pdf') {
       normalizedMimeType = 'application/pdf';
     } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension || '')) {

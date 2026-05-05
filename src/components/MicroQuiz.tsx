@@ -165,8 +165,8 @@ export default function MicroQuiz({
   };
 
   const generateQuiz = async (module: any, isInitial = true) => {
-    if (isInitial && !isPremium && usageCount >= 3) {
-      onLimitReached("Daily quiz limit reached");
+    if (isInitial && !isPremium && (usageCount >= 3 || allStats.length >= 3)) {
+      onLimitReached("3-3-3-3 Trial Limit Reached: Quiz generation capacity full.");
       return;
     }
 
@@ -220,11 +220,11 @@ export default function MicroQuiz({
            const usageRef = doc(db, 'users', user.uid, 'daily_usage', todayStr);
            const usageSnap = await getDoc(usageRef);
            
-           if (!usageSnap.exists()) {
-             await setDoc(usageRef, { quizzes: 1, uploads: 0, ai: 0, notes: 0 });
-           } else {
-             await updateDoc(usageRef, { quizzes: (usageSnap.data().quizzes || 0) + 1 });
-           }
+            if (!usageSnap.exists()) {
+              await setDoc(usageRef, { quizzes: 1, uploads: 0, ai: 0, notes: 0, schedules: 0 });
+            } else {
+              await updateDoc(usageRef, { quizzes: (usageSnap.data().quizzes || 0) + 1 });
+            }
         }
       } else {
         setQuizPool(prev => [...prev, ...randomized]);
