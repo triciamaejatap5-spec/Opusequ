@@ -3,7 +3,8 @@ import { auth, db } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
   GoogleAuthProvider, 
-  signInWithPopup 
+  signInWithPopup,
+  sendEmailVerification 
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
@@ -81,6 +82,9 @@ export default function SignUp({ onNavigateToSignIn, onGoogleSuccess }: SignUpPr
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       if (userCredential.user) {
+        // Trigger Email Verification immediately
+        await sendEmailVerification(userCredential.user);
+        
         // Initialize User Doc
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email: email,

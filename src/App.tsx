@@ -84,6 +84,7 @@ import IntroPage from './components/IntroPage';
 import PremiumModal from './components/PremiumModal';
 import AdminPortal from './components/AdminPortal';
 import ProgressLog from './components/ProgressLog';
+import VerificationScreen from './components/VerificationScreen';
 import { sendGmailEmail, formatBriefingEmail, getAccessToken, formatDiagnosticEmail } from './services/gmailService';
 
 const ReadinessCalendar = ({ statsData }: { statsData: any[] }) => {
@@ -996,7 +997,11 @@ export default function App() {
       clearTimeout(timeout);
       if (authUser) {
         setUser(authUser);
-        setActiveTab('home');
+        if (!authUser.emailVerified) {
+          setAuthView('verification');
+        } else {
+          setActiveTab('home');
+        }
       } else {
         setUser(null);
       }
@@ -1131,6 +1136,20 @@ export default function App() {
             onNavigateToSignIn={() => setAuthView('signin')}
             onGoogleSuccess={() => setActiveTab('home')}
           />;
+    }
+
+    if (!user.emailVerified) {
+      return (
+        <VerificationScreen 
+          user={user} 
+          onVerified={() => {
+            if (auth.currentUser) {
+              setUser({...auth.currentUser} as any);
+              setActiveTab('home');
+            }
+          }} 
+        />
+      );
     }
 
     const handleExit = () => setActiveTab('home');
@@ -1284,7 +1303,7 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {user && (
+      {user && user.emailVerified && (
         <nav className="glass-nav">
           <button onClick={() => setActiveTab('home')} className={`nav-item flex-1 ${activeTab === 'home' ? 'active' : ''}`}>
             <Home size={18} />
