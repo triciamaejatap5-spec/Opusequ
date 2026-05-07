@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, XCircle, ArrowRight, Zap, Trophy, Timer, AlertCircle, Sparkles, X, BookOpen, Loader2, Home, Award, Clock } from 'lucide-react';
 import { QuizQuestion } from '../types';
@@ -97,6 +97,30 @@ export default function MicroQuiz({
   const [totalAttempted, setTotalAttempted] = useState(0);
 
   const [activeCourseType, setActiveCourseType] = useState<'major' | 'minor'>('major');
+
+  const timeLeftRef = useRef(timeLeft);
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  // Periodic persistence for timer/progress
+  useEffect(() => {
+    if (step !== 'quiz' || !selectedModule || !onDraftSave) return;
+    
+    const interval = setInterval(() => {
+      onDraftSave(selectedModule.title, {
+        moduleId: selectedModule.id,
+        currentIndex: currentIndex,
+        score: score,
+        totalAttempted: totalAttempted,
+        quizPool: quizPool,
+        title: selectedModule.title,
+        timeLeft: timeLeftRef.current 
+      });
+    }, 15000); // Save every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [step, selectedModule, currentIndex, score, totalAttempted, quizPool, onDraftSave]);
 
   useEffect(() => {
     // Load cached quizzes on mount
@@ -276,25 +300,17 @@ export default function MicroQuiz({
       }
 
       const currentReadiness = userData?.readiness || 0;
-      const quizPerformance = (score / (totalAttempted || 1)) * 100;
-      
-      // Readiness logic: first quiz of the day defines the primary jump, 
-      // but session updates sync to Heat Map immediately.
-      let newReadiness = currentReadiness;
-      
-      if (lastDate !== today) {
-        newReadiness = Math.round((currentReadiness * 0.7) + (quizPerformance * 0.3));
-      } else {
-        // Subsequent quizzes: smaller adjustments to keep it dynamic
-        newReadiness = Math.round((currentReadiness * 0.95) + (quizPerformance * 0.05));
-      }
+      // Readiness logic: Map directly to the latest attempt percentage as requested.
+      // We use quizPool.length as the canonical denominator for 0% deviation.
+      const quizPerformance = Math.round((score / Math.max(1, quizPool.length)) * 100);
+      const newReadiness = quizPerformance;
 
       // Sync to Stats collection with fixed ID per date for immediate heat map update
       const statsDocRef = doc(db, 'users', user.uid, 'stats', today);
       await setDoc(statsDocRef, {
         userId: user.uid,
         readiness: Math.min(100, newReadiness),
-        performance: Math.round(quizPerformance),
+        performance: quizPerformance,
         streak: newStreak,
         date: today,
         timestamp: serverTimestamp()
@@ -344,7 +360,8 @@ export default function MicroQuiz({
         score: newScore,
         totalAttempted: totalAttempted + 1,
         quizPool: quizPool,
-        title: selectedModule.title
+        title: selectedModule.title,
+        timeLeft: timeLeft // Persist remaining time
       });
     }
 
@@ -419,9 +436,20 @@ export default function MicroQuiz({
                   onClick={() => {
                     const mod = modules.find(m => m.id === draft.moduleId || m.title === draft.title) || { id: draft.moduleId, title: draft.title };
                     setQuizPool(draft.quizPool);
-                    setCurrentIndex(draft.currentIndex + 1);
+                    // Robust resumption: Next question is at index of total attempted
+                    const nextIndex = draft.totalAttempted || 0;
+                    if (nextIndex >= draft.quizPool.length) {
+                      // Already finished questions but draft wasn't deleted
+                      setScore(draft.score);
+                      setTotalAttempted(draft.totalAttempted);
+                      setSelectedModule(mod);
+                      handleFinish();
+                      return;
+                    }
+                    setCurrentIndex(nextIndex);
                     setScore(draft.score);
                     setTotalAttempted(draft.totalAttempted);
+                    setTimeLeft(draft.timeLeft !== undefined ? draft.timeLeft : 300);
                     setSelectedModule(mod);
                     setSelectedOption(null);
                     setIsAnswered(false);
@@ -432,7 +460,7 @@ export default function MicroQuiz({
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-bold text-accent truncate">{draft.title}</h3>
                     <p className="text-[8px] uppercase tracking-widest text-text-secondary mt-1">
-                      Resume at {draft.currentIndex + 1} / {draft.quizPool?.length} — Score: {draft.score}
+                      Resume at {(draft.totalAttempted || 0) + 1} / {draft.quizPool?.length} — Score: {draft.score}
                     </p>
                   </div>
                   <ArrowRight size={14} className="text-accent" />
@@ -503,15 +531,24 @@ export default function MicroQuiz({
                         const draft = existingDrafts.find(d => d.moduleId === mod.id || d.title === mod.title);
                         if (draft) {
                           setQuizPool(draft.quizPool);
-                          // If currentIndex was finished, move to next
-                          setCurrentIndex(draft.currentIndex + 1);
+                          const nextIndex = draft.totalAttempted || 0;
+                          if (nextIndex >= draft.quizPool.length) {
+                            setScore(draft.score);
+                            setTotalAttempted(draft.totalAttempted);
+                            setSelectedModule(mod);
+                            handleFinish();
+                            return;
+                          }
+                          setCurrentIndex(nextIndex);
                           setScore(draft.score);
                           setTotalAttempted(draft.totalAttempted);
+                          setTimeLeft(draft.timeLeft !== undefined ? draft.timeLeft : 300);
                           setSelectedModule(mod);
                           setSelectedOption(null);
                           setIsAnswered(false);
                           setStep('quiz');
                         } else {
+                          setTimeLeft(300); // Reset timer for new quiz
                           setSelectedModule(mod);
                           generateQuiz(mod);
                         }

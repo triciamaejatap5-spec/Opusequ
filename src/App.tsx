@@ -301,7 +301,7 @@ const Dashboard = ({
             </div>
             <div>
               <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">AI ASSISTANT</h3>
-              <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Ask AI Assistant</p>
+              <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Lumen Oracle Sync</p>
               <p className="text-[8px] uppercase tracking-widest text-text-secondary opacity-60">Real-time Shift & Study Support</p>
             </div>
             <ChevronRight size={16} className="ml-auto text-text-secondary opacity-30 group-hover:text-accent group-hover:opacity-100 transition-all" />
@@ -313,9 +313,9 @@ const Dashboard = ({
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-bold uppercase tracking-widest text-text-primary">BEGIN 5-MIN SPRINT</h3>
-              <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Begin 5-Min Sprint</p>
+              <p className="text-[10px] uppercase tracking-widest text-accent font-bold">Targeted Subject Review</p>
               <p className="text-[8px] uppercase tracking-widest text-text-secondary opacity-60">
-                 Maximize your gap. Every second counts toward your Aequus score.
+                 Maximize your gap. Every second counts toward your Readiness score.
               </p>
             </div>
             <ChevronRight size={16} className="ml-auto text-text-secondary opacity-30 group-hover:text-accent group-hover:opacity-100 transition-all" />
@@ -336,7 +336,7 @@ const Dashboard = ({
             <div className="text-bg">
               <p className="text-[10px] uppercase font-bold tracking-widest">Active Sprint Detected</p>
               <p className="text-[11px] font-medium leading-tight">
-                You are at {unfinishedQuizzes[0].currentIndex + 1}/{unfinishedQuizzes[0].quizPool?.length}. Don't leave it unfinished—finish your quiz now to update your readiness score!
+                You are at {(unfinishedQuizzes[0].totalAttempted || 0) + 1}/{unfinishedQuizzes[0].quizPool?.length}. Don't leave it unfinished—finish your quiz now to update your readiness score!
               </p>
             </div>
           </div>
@@ -383,7 +383,7 @@ const Dashboard = ({
               <Info size={10} /> Performance Basis Legend
             </h4>
             <p className="text-[7px] text-text-secondary leading-normal italic">
-              Scores are calculated based on your daily Micro-Quiz performance and engagement consistency. Aim for Excellence to minimize prep time during rigid work shifts.
+              Scores are mapped directly to your latest Micro-Quiz completion percentage. Aim for Excellence to minimize prep time during rigid work shifts.
             </p>
           </div>
 
@@ -442,7 +442,7 @@ const Dashboard = ({
                           <h4 className="text-[11px] font-bold truncate">{mod.title}</h4>
                           {draft && (
                             <span className="text-[7px] uppercase font-bold px-1.5 py-0.5 bg-accent text-bg rounded-sm animate-pulse">
-                              In Progress ({draft.currentIndex + 1}/{draft.quizPool?.length})
+                              In Progress ({(draft.totalAttempted || 0) + 1}/{draft.quizPool?.length})
                             </span>
                           )}
                         </div>
@@ -1028,11 +1028,10 @@ export default function App() {
         createdAt: serverTimestamp()
       });
 
-      // Award readiness increase logic
-      const increase = score >= 90 ? 10 : score >= 75 ? 5 : 2;
+      // Award readiness sync notification
       setNotification({
         message: `Readiness synchronized.`,
-        sub: `Sprint complete: ${rawScore}/${totalQuestions}. Level increased by ${increase}%.`
+        sub: `Sprint complete: ${rawScore}/${totalQuestions} (${score}%). Dashboard heat map updated.`
       });
 
       // Send Gmail Notification if connected

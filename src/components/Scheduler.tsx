@@ -392,7 +392,7 @@ export default function Scheduler({ onExit, isPremium, usageCount = 0, onLimitRe
           <p className="text-[10px] uppercase tracking-[2px] font-bold">Aequus Reminder</p>
         </div>
         <p className="text-[11px] text-text-secondary leading-relaxed italic font-serif">
-          Schedules are monitored 24/7. Upcoming deadlines will trigger automated academic reminders to keep your Aequus score high.
+          Schedules are monitored 24/7. Upcoming deadlines will trigger automated academic reminders to keep your Readiness score high.
         </p>
       </div>
     </motion.div>
